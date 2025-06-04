@@ -55,6 +55,7 @@ import org.eclipse.lemminx.customservice.synapse.mediatorService.pojo.MediatorRe
 import org.eclipse.lemminx.customservice.synapse.mediatorService.pojo.SynapseConfigRequest;
 import org.eclipse.lemminx.customservice.synapse.mediatorService.pojo.SynapseConfigResponse;
 import org.eclipse.lemminx.customservice.synapse.mediatorService.pojo.UISchemaRequest;
+import org.eclipse.lemminx.customservice.synapse.parser.DeployPluginDetails;
 import org.eclipse.lemminx.customservice.synapse.parser.OverviewPageDetailsResponse;
 import org.eclipse.lemminx.customservice.synapse.parser.UpdateConfigRequest;
 import org.eclipse.lemminx.customservice.synapse.parser.UpdateDependencyRequest;
@@ -75,6 +76,7 @@ import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.PublishDiagnosticsParams;
 import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
+import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.WorkspaceFolder;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.jsonrpc.messages.Either3;
@@ -252,4 +254,13 @@ public interface ISynapseLanguageService {
 
     @JsonRequest
     CompletableFuture<String> downloadDriverForConnector(DriverDownloadRequest request);
+
+    @JsonRequest
+    CompletableFuture<DeployPluginDetails> updateMavenDeployPlugin(DeployPluginDetails request);
+
+    @JsonRequest
+    CompletableFuture<TextEdit> removeMavenDeployPlugin();
+
+    @JsonRequest
+    CompletableFuture<DeployPluginDetails> getMavenDeployPluginDetails();
 }

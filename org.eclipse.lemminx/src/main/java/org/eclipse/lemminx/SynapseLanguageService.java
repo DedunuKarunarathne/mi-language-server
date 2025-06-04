@@ -65,6 +65,8 @@ import org.eclipse.lemminx.customservice.synapse.mediatorService.pojo.MediatorRe
 import org.eclipse.lemminx.customservice.synapse.mediatorService.pojo.SynapseConfigRequest;
 import org.eclipse.lemminx.customservice.synapse.mediatorService.pojo.SynapseConfigResponse;
 import org.eclipse.lemminx.customservice.synapse.mediatorService.pojo.UISchemaRequest;
+import org.eclipse.lemminx.customservice.synapse.parser.Constants;
+import org.eclipse.lemminx.customservice.synapse.parser.DeployPluginDetails;
 import org.eclipse.lemminx.customservice.synapse.parser.OverviewPage;
 import org.eclipse.lemminx.customservice.synapse.parser.OverviewPageDetailsResponse;
 import org.eclipse.lemminx.customservice.synapse.parser.UpdateConfigRequest;
@@ -123,6 +125,7 @@ import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.PublishDiagnosticsParams;
 import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
+import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.WorkspaceFolder;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.jsonrpc.messages.Either3;
@@ -667,6 +670,27 @@ public class SynapseLanguageService implements ISynapseLanguageService {
                 projectUri,
                 request.getConnectorName(),
                 request.getConnectionType()));
+    }
+
+    @Override
+    public CompletableFuture<DeployPluginDetails> updateMavenDeployPlugin(DeployPluginDetails pluginDetails) {
+
+        return CompletableFuture.supplyAsync(() -> PomParser.addCarDeployPluginToPom(
+                new File(projectUri + File.separator + Constants.POM_FILE), pluginDetails));
+    }
+
+    @Override
+    public CompletableFuture<DeployPluginDetails> getMavenDeployPluginDetails() {
+
+        return CompletableFuture.supplyAsync(() -> PomParser.extractCarDeployPluginFields(
+                new File(projectUri + File.separator + Constants.POM_FILE)));
+    }
+
+    @Override
+    public CompletableFuture<TextEdit> removeMavenDeployPlugin() {
+
+        return CompletableFuture.supplyAsync(() -> PomParser.removeDeployPlugin(
+                new File(projectUri + File.separator + Constants.POM_FILE)));
     }
 
     public String getProjectUri() {

@@ -13,16 +13,22 @@
  */
 package org.eclipse.lemminx.customservice.synapse.parser.pom;
 
+import com.ctc.wstx.stax.WstxInputFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.lemminx.customservice.synapse.parser.Constants;
+import org.eclipse.lemminx.customservice.synapse.parser.DeployPluginDetails;
 import org.eclipse.lemminx.customservice.synapse.parser.DependencyDetails;
 import org.eclipse.lemminx.customservice.synapse.parser.OverviewPageDetailsResponse;
 import org.eclipse.lemminx.customservice.synapse.parser.UpdateDependencyRequest;
 import org.eclipse.lemminx.customservice.synapse.parser.UpdateResponse;
+import org.eclipse.lemminx.customservice.synapse.utils.Constant;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextEdit;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -30,13 +36,20 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
+import javax.xml.stream.Location;
+import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.util.List;
@@ -62,12 +75,11 @@ public class PomParser {
             Document document = builder.newDocument();
             List<String> pomContent;
             UpdateResponse updateResponse= new UpdateResponse();
-            Range initialRange;
             Element dependenciesElement = null;
             StringBuilder elementInString = new StringBuilder();
             pomContent = readPom(projectUri);
             assert pomContent != null;
-            initialRange = getRange(pomContent);
+            Position initialRange = getDependenciesStartPosition(pomContent);
             if (!hasDependencies) {
                 dependenciesElement = document.createElement(Constants.DEPENDENCIES);
             }
@@ -92,13 +104,188 @@ public class PomParser {
             if (value == null) {
                 return null;
             }
-            updateResponse.add(new TextEdit(new Range(initialRange.getStart(), new Position(initialRange.getStart().
-                    getLine(), initialRange.getStart().getCharacter() + value.length() + 1)), value));
+            updateResponse.add(new TextEdit(new Range(initialRange, new Position(initialRange.getLine(),
+                    initialRange.getCharacter() + value.length() + 1)), value));
             return updateResponse;
         } catch (ParserConfigurationException e) {
             LOGGER.log(Level.SEVERE, "Error parsing the POM file : " + e.getMessage());
             return null;
         }
+    }
+
+   public static DeployPluginDetails addCarDeployPluginToPom(File pomFile, DeployPluginDetails pluginDetails) {
+       try {
+           String content = new String(java.nio.file.Files.readAllBytes(pomFile.toPath()));
+           DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+           DocumentBuilder builder = factory.newDocumentBuilder();
+           Document doc = builder.parse(new ByteArrayInputStream(content.getBytes()));
+           doc.getDocumentElement().normalize();
+
+           Document snippetDoc = builder.newDocument();
+           Element plugin = snippetDoc.createElement(Constants.PLUGIN);
+           appendTextElement(snippetDoc, plugin, Constant.GROUP_ID_KEY, "org.wso2.maven");
+           appendTextElement(snippetDoc, plugin, Constant.ARTIFACT_ID, "maven-car-deploy-plugin");
+           appendTextElement(snippetDoc, plugin, Constant.VERSION, "5.2.44");
+
+           Element executions = snippetDoc.createElement("executions");
+           Element execution = snippetDoc.createElement("execution");
+           appendTextElement(snippetDoc, execution, Constant.ID, "car-deploy");
+           appendTextElement(snippetDoc, execution, "phase", "deploy");
+           Element goals = snippetDoc.createElement("goals");
+           appendTextElement(snippetDoc, goals, "goal", "deploy-car");
+           execution.appendChild(goals);
+           executions.appendChild(execution);
+           plugin.appendChild(executions);
+
+           Element dependencies = snippetDoc.createElement(Constants.DEPENDENCIES);
+           Element dependency = snippetDoc.createElement(Constant.DEPENDENCY);
+           appendTextElement(snippetDoc, dependency, Constant.GROUP_ID_KEY, "com.sun.activation");
+           appendTextElement(snippetDoc, dependency, Constant.ARTIFACT_ID, "javax.activation");
+           appendTextElement(snippetDoc, dependency, Constant.VERSION, "1.2.0");
+           dependencies.appendChild(dependency);
+           plugin.appendChild(dependencies);
+
+           Element configuration = snippetDoc.createElement("configuration");
+           Element carbonServers = snippetDoc.createElement("carbonServers");
+           Element carbonServer = snippetDoc.createElement("CarbonServer");
+
+           appendTextElement(snippetDoc, carbonServer, "trustStorePath", pluginDetails.getTruststorePath());
+           appendTextElement(snippetDoc, carbonServer, "trustStorePassword", pluginDetails.getTruststorePassword());
+           appendTextElement(snippetDoc, carbonServer, "trustStoreType", pluginDetails.getTruststoreType());
+           appendTextElement(snippetDoc, carbonServer, "serverUrl", pluginDetails.getServerUrl());
+           appendTextElement(snippetDoc, carbonServer, "userName", pluginDetails.getUsername());
+           appendTextElement(snippetDoc, carbonServer, "password", pluginDetails.getPassword());
+           appendTextElement(snippetDoc, carbonServer, "serverType", pluginDetails.getServerType());
+           appendTextElement(snippetDoc, carbonServer, "operation", "deploy");
+
+           carbonServers.appendChild(carbonServer);
+           configuration.appendChild(carbonServers);
+           plugin.appendChild(configuration);
+
+           Transformer transformer = TransformerFactory.newInstance().newTransformer();
+           transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+           transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-space", "4");
+           transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+
+           StringWriter writer = new StringWriter();
+           transformer.transform(new DOMSource(plugin), new StreamResult(writer));
+           String pluginSnippet = writer.toString();
+
+           List<String> pomContent = readPom(pomFile.getParentFile().getAbsolutePath());
+           Range pluginRange = getDeployPluginRange(pomContent);
+           if (pluginRange != null) {
+               return new DeployPluginDetails(new TextEdit(new Range(pluginRange.getStart(),
+                       new Position(pluginRange.getEnd().getLine(),
+                       pluginRange.getEnd().getCharacter() + pluginSnippet.length() + 1)), pluginSnippet));
+           } else {
+               Position newPluginPosition = getNewPluginAddPosition(pomContent);
+               return new DeployPluginDetails(new TextEdit(new Range(newPluginPosition,
+                        new Position(newPluginPosition.getLine(), newPluginPosition.getCharacter())), pluginSnippet));
+           }
+
+       } catch (ParserConfigurationException | TransformerException e) {
+           LOGGER.log(Level.SEVERE, "Error occurred while generating plugin configuration: " + e.getMessage());
+       } catch (XMLStreamException | SAXException | IOException e) {
+           LOGGER.log(Level.SEVERE, "Error occurred while reading pom configuration: " + e.getMessage());
+       }
+       return null;
+   }
+
+   public static DeployPluginDetails extractCarDeployPluginFields(File pomFile) {
+       try {
+           DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+           DocumentBuilder builder = factory.newDocumentBuilder();
+           Document doc = builder.parse(pomFile);
+           doc.getDocumentElement().normalize();
+
+           NodeList plugins = doc.getElementsByTagName(Constants.PLUGIN);
+           for (int i = 0; i < plugins.getLength(); i++) {
+               Element plugin = (Element) plugins.item(i);
+               String groupId = getTextValue(plugin, Constant.GROUP_ID_KEY);
+               String artifactId = getTextValue(plugin, Constant.ARTIFACT_ID);
+
+               if ("org.wso2.maven".equals(groupId) && "maven-car-deploy-plugin".equals(artifactId)) {
+                   Element configuration = getFirstChildElementByTagName(plugin, "configuration");
+                   Element carbonServers = getFirstChildElementByTagName(configuration, "carbonServers");
+                   Element carbonServer = getFirstChildElementByTagName(carbonServers, "CarbonServer");
+
+                   if (carbonServer != null) {
+                       return new DeployPluginDetails(
+                               getTextValue(carbonServer, "trustStorePath"),
+                               getTextValue(carbonServer, "trustStorePassword"),
+                               getTextValue(carbonServer, "trustStoreType"),
+                               getTextValue(carbonServer, "serverUrl"),
+                               getTextValue(carbonServer, "userName"),
+                               getTextValue(carbonServer, "password"),
+                               getTextValue(carbonServer, "serverType"));
+                   }
+               }
+           }
+       } catch (ParserConfigurationException | IOException | SAXException e) {
+           LOGGER.log(Level.SEVERE, "Error extracting CAR deploy plugin configurations: " + e.getMessage());
+       }
+       return null;
+   }
+
+    public static Range getDeployPluginRange(List<String> pomContent) throws XMLStreamException {
+        XMLStreamReader reader = getXMLReader(pomContent);
+        boolean insidePlugin = false;
+        boolean insideArtifactId = false;
+        boolean isTargetPlugin = false;
+        Position pluginStart = null;
+        Position pluginEnd = null;
+
+        while (reader.hasNext()) {
+            int event = reader.next();
+            if (event == XMLStreamConstants.START_ELEMENT) {
+                String localName = reader.getLocalName();
+                if (localName.equals(Constants.PLUGIN)) {
+                    insidePlugin = true;
+                    Location startLoc = reader.getLocation();
+                    pluginStart = new Position(startLoc.getLineNumber(), startLoc.getColumnNumber());
+                } else if (insidePlugin && localName.equals(Constants.ARTIFACT_ID)) {
+                    insideArtifactId = true;
+                }
+            } else if (event == XMLStreamConstants.CHARACTERS) {
+                if (insidePlugin && insideArtifactId) {
+                    String text = reader.getText().trim();
+                    if ("maven-car-deploy-plugin".equals(text)) {
+                        isTargetPlugin = true;
+                    }
+                }
+            } else if (event == XMLStreamConstants.END_ELEMENT) {
+                String localName = reader.getLocalName();
+                if (localName.equals(Constants.ARTIFACT_ID)) {
+                    insideArtifactId = false;
+                } else if (localName.equals(Constants.PLUGIN)) {
+                    if (insidePlugin && isTargetPlugin) {
+                        Location endLoc = reader.getLocation();
+                        pluginEnd = new Position(endLoc.getLineNumber(), endLoc.getColumnNumber() + "</plugin>".length());
+                        break;
+                    }
+                    insidePlugin = false;
+                    isTargetPlugin = false;
+                    pluginStart = null;
+                }
+            }
+        }
+        if (pluginStart != null && pluginEnd != null) {
+            return new Range(pluginStart, pluginEnd);
+        }
+        return null;
+    }
+
+    public static TextEdit removeDeployPlugin(File pomFile) {
+        try {
+            Range pluginRange = getDeployPluginRange(readPom(pomFile.getParentFile().getAbsolutePath()));
+            if (pluginRange != null) {
+                return new TextEdit(pluginRange, StringUtils.EMPTY);
+            }
+        } catch (XMLStreamException e) {
+            LOGGER.log(Level.SEVERE, "Error getting plugin range from POM file: " + e.getMessage());
+        }
+        Position defaultPosition = new Position(0,0);
+        return new TextEdit(new Range(defaultPosition, defaultPosition), StringUtils.EMPTY);
     }
 
     private static List<String> readPom(String projectUri) {
@@ -114,47 +301,49 @@ public class PomParser {
         }
     }
 
-    private static Range getRange(List<String> pomContent) {
-        int i = 1;
-        int dependenciesStartTag = 0;
-        int dependenciesCharLength = 0;
-        int position = 0;
-        int character = 0;
-        for (String content : pomContent) {
-            String line = content.trim();
-            if (line.contains(Constants.DEPENDENCIES_START_TAG)) {
-                hasDependencies = true;
-                dependenciesStartTag = i;
-                dependenciesCharLength = content.indexOf(Constants.DEPENDENCIES_START_TAG) +
-                        Constants.DEPENDENCIES_START_TAG.length() + 1;
-            }
-            if (line.contains(Constants.DEPENDENCY_END_TAG)) {
-                hasDependencies = true;
-                if (i > position) {
-                    position = i;
-                    character = content.indexOf(Constants.DEPENDENCY_END_TAG) +
-                            Constants.DEPENDENCY_END_TAG.length() + 1;
-                }
-            }
-            if(line.contains(Constants.DEPENDENCIES_END_TAG)) {
-                if (position == 0 || (dependenciesStartTag > position)) {
-                    position = dependenciesStartTag;
-                    character = dependenciesCharLength;
-                }
-                break;
-            }
-            if (!hasDependencies) {
-                if (content.trim().contains(Constants.PROPERTIES_END_TAG)) {
-                    if (i > position) {
-                        position = i;
-                        character = content.indexOf(Constants.PROPERTIES_END_TAG) +
-                                Constants.PROPERTIES_END_TAG.length() + 1;
+    private static Position getDependenciesStartPosition(List<String> pomContent) {
+        try {
+            XMLStreamReader reader = getXMLReader(pomContent);
+            int depth = 0;
+            boolean insideProject = false;
+            Position propertiesEndPosition = null;
+
+            while (reader.hasNext()) {
+                int eventType = reader.next();
+                if (eventType == XMLStreamConstants.START_ELEMENT) {
+                    String localName = reader.getLocalName();
+                    if (localName.equals(Constant.PROJECT)) {
+                        insideProject = true;
+                        depth = 1;
+                    } else if (insideProject) {
+                        depth++;
+                        if (localName.equals(Constants.DEPENDENCIES) && depth == 2) {
+                            Location location = reader.getLocation();
+                            hasDependencies = true;
+                            int startLine = location.getLineNumber();
+                            int startColumn = location.getColumnNumber();
+                            int endColumn = startColumn + localName.length() + 3;
+                            return new Position(startLine, endColumn);
+                        }
                     }
+                } else if (eventType == XMLStreamConstants.END_ELEMENT) {
+                    String localName = reader.getLocalName();
+                    if (localName.equals(Constants.PROPERTIES) && depth == 2) {
+                        Location location = reader.getLocation();
+                        hasDependencies = false;
+                        int startLine = location.getLineNumber();
+                        int startColumn = location.getColumnNumber();
+                        int endColumn = startColumn + localName.length() + 4;
+                        propertiesEndPosition = new Position(startLine, endColumn);
+                    }
+                    depth--;
                 }
             }
-            i++;
+            return propertiesEndPosition != null ? propertiesEndPosition : new Position(0, 0);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error reading the POM file: " + e.getMessage());
+            return null;
         }
-        return new Range(new Position(position, character), new Position());
     }
 
     private static Element createDependencyElement(Document document, DependencyDetails dependencyDetails) {
@@ -227,5 +416,94 @@ public class PomParser {
             LOGGER.log(Level.SEVERE, "Error processing the XML element: " + e.getMessage());
             return null;
         }
+    }
+
+    private static Position getNewPluginAddPosition(List<String> pomContent) {
+        try {
+            XMLStreamReader reader = getXMLReader(pomContent);
+            boolean inProfiles = false;
+            boolean inProfile = false;
+            boolean isDefaultProfile = false;
+            boolean inId = false;
+            boolean inPlugins = false;
+            Position lastPluginEnd = null;
+            int depth = 0;
+
+            while (reader.hasNext()) {
+                int event = reader.next();
+                if (event == XMLStreamConstants.START_ELEMENT) {
+                    depth++;
+                    String localName = reader.getLocalName();
+                    if (localName.equals(Constant.PROFILES)) {
+                        inProfiles = true;
+                    } else if (inProfiles && localName.equals(Constant.PROFILE)) {
+                        inProfile = true;
+                        isDefaultProfile = false;
+                    } else if (inProfile && localName.equals(Constant.ID)) {
+                        inId = true;
+                    } else if (inProfile && isDefaultProfile && localName.equals(Constants.PLUGINS)) {
+                        inPlugins = true;
+                    }
+                } else if (event == XMLStreamConstants.CHARACTERS) {
+                    if (inId && inProfile) {
+                        String idText = reader.getText().trim();
+                        if (idText.equals(Constant.DEFAULT)) {
+                            isDefaultProfile = true;
+                        }
+                    }
+                } else if (event == XMLStreamConstants.END_ELEMENT) {
+                    String localName = reader.getLocalName();
+                    if (localName.equals(Constant.ID)) {
+                        inId = false;
+                    } else if (localName.equals(Constants.PLUGINS)) {
+                        inPlugins = false;
+                    } else if (localName.equals(Constant.PROFILE)) {
+                        inProfile = false;
+                    } else if (localName.equals(Constant.PROFILES)) {
+                        inProfiles = false;
+                    }
+                    if (inPlugins && localName.equals(Constants.PLUGIN)) {
+                        Location location = reader.getLocation();
+                        lastPluginEnd = new Position(location.getLineNumber(), location.getColumnNumber() + localName.length() + 3);
+                    }
+                    depth--;
+                }
+            }
+            return lastPluginEnd != null ? lastPluginEnd : new Position(0, 0);
+        } catch (XMLStreamException e) {
+            LOGGER.log(Level.SEVERE, "Error reading the POM file: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private static void appendTextElement(Document doc, Element parent, String tag, String value) {
+        Element elem = doc.createElement(tag);
+        elem.setTextContent(value);
+        parent.appendChild(elem);
+    }
+
+    private static String getTextValue(Element parent, String tagName) {
+        NodeList list = parent.getElementsByTagName(tagName);
+        if (list.getLength() > 0) {
+            return list.item(0).getTextContent().trim();
+        }
+        return null;
+    }
+
+    private static Element getFirstChildElementByTagName(Element parent, String tagName) {
+        NodeList children = parent.getElementsByTagName(tagName);
+        for (int i = 0; i < children.getLength(); i++) {
+            Node item = children.item(i);
+            if (item.getParentNode().equals(parent)) {
+                return (Element) item;
+            }
+        }
+        return null;
+    }
+
+    private static XMLStreamReader getXMLReader(List<String> pomContent) throws XMLStreamException {
+        String xml = String.join("\n", pomContent);
+        WstxInputFactory factory = new WstxInputFactory();
+        return factory.createXMLStreamReader(new StringReader(xml));
     }
 }

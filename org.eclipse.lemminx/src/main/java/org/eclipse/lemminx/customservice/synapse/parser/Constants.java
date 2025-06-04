@@ -25,6 +25,7 @@ public class Constants {
     public static final String CONFIG_FILE = "config.properties";
     public static final String POM_FILE = "pom.xml";
     public static final String DEPENDENCY = "dependency";
+    public static final String PLUGINS = "plugins";
     public static final String PLUGIN = "plugin";
     public static final String REPOSITORY = "repository";
     public static final String PLUGIN_REPOSITORY = "pluginRepository";
