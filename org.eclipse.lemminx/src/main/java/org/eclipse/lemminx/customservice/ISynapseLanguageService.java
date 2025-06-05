@@ -15,6 +15,7 @@
 package org.eclipse.lemminx.customservice;
 
 import com.google.gson.JsonObject;
+import org.eclipse.lemminx.customservice.synapse.CodeDiagnosticRequest;
 import org.eclipse.lemminx.customservice.synapse.api.generator.pojo.IsEqualSwaggersParam;
 import org.eclipse.lemminx.customservice.synapse.api.generator.pojo.GenerateAPIResponse;
 import org.eclipse.lemminx.customservice.synapse.api.generator.pojo.GenerateSwaggerParam;
@@ -47,6 +48,7 @@ import org.eclipse.lemminx.customservice.synapse.driver.DriverDownloadRequest;
 import org.eclipse.lemminx.customservice.synapse.dynamic.db.DynamicField;
 import org.eclipse.lemminx.customservice.synapse.dynamic.db.GetDynamicFieldsRequest;
 import org.eclipse.lemminx.customservice.synapse.expression.pojo.ExpressionParam;
+import org.eclipse.lemminx.customservice.synapse.expression.pojo.ExpressionValidationResponse;
 import org.eclipse.lemminx.customservice.synapse.expression.pojo.HelperPanelData;
 import org.eclipse.lemminx.customservice.synapse.inbound.conector.InboundConnectorResponse;
 import org.eclipse.lemminx.customservice.synapse.inbound.conector.InboundConnectorParam;
@@ -93,6 +95,12 @@ public interface ISynapseLanguageService {
 
     @JsonRequest
     CompletableFuture<PublishDiagnosticsParams> diagnostic(TextDocumentIdentifier param);
+
+    @JsonRequest
+    CompletableFuture<PublishDiagnosticsParams> codeDiagnostic(CodeDiagnosticRequest param);
+
+    @JsonRequest
+    CompletableFuture<ExpressionValidationResponse> expressionValidation(ExpressionParam param);
 
     @JsonRequest
     CompletableFuture<DirectoryMapResponse> directoryTree(WorkspaceFolder param);

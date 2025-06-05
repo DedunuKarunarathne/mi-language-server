@@ -21,6 +21,8 @@
 		<apache.woden.version>1.0.0.M9-wso2v1</apache.woden.version>
 		<org.apache.maven.shared.version>3.1.0</org.apache.maven.shared.version>
 		<velocity.version>2.4</velocity.version>
+		<org.antlr4.version>4.7.1</org.antlr4.version>
+		<antlr4.maven.plugin.version>4.7.1</antlr4.maven.plugin.version>
 	</properties>
 	<url>https://github.com/eclipse/lemminx</url>
 	<licenses>
@@ -206,6 +208,11 @@
 				<version>5.3.1</version>
 				<scope>test</scope>
 			</dependency>
+			<dependency>
+				<groupId>org.antlr</groupId>
+				<artifactId>antlr4-runtime</artifactId>
+				<version>${org.antlr4.version}</version>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 	<build>
@@ -283,6 +290,11 @@
 						<tagNameFormat>@{project.version}</tagNameFormat>
 						<arguments>-DskipTests=true -Dcbi.jarsigner.skip=false -Pci,generate-p2</arguments>
 					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.antlr</groupId>
+					<artifactId>antlr4-maven-plugin</artifactId>
+					<version>${antlr4.maven.plugin.version}</version>
 				</plugin>
 			</plugins>
 		</pluginManagement>

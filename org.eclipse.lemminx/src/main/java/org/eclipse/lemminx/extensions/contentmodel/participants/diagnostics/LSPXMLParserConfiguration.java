@@ -22,6 +22,7 @@ import org.apache.xerces.xni.parser.XMLConfigurationException;
 import org.apache.xerces.xni.parser.XMLDocumentSource;
 import org.eclipse.lemminx.extensions.contentmodel.settings.XMLValidationSettings;
 import org.eclipse.lemminx.extensions.relaxng.xml.validator.ExternalRelaxNGValidator;
+import org.eclipse.lemminx.extensions.synapse.validator.SynapseExpressionValidator;
 import org.eclipse.lemminx.extensions.xerces.AbstractLSPErrorReporter;
 import org.eclipse.lemminx.extensions.xerces.ExternalXMLDTDValidator;
 import org.eclipse.lemminx.extensions.xerces.LSPSecurityManager;
@@ -50,6 +51,7 @@ public class LSPXMLParserConfiguration extends XMLModelAwareParserConfiguration 
 	private ExternalXMLDTDValidator externalDTDValidator;
 
 	private ExternalRelaxNGValidator externalRelaxNGValidator;
+	private SynapseExpressionValidator synapseExpressionValidator;
 
 	public LSPXMLParserConfiguration(XMLGrammarPool grammarPool, boolean disableDTDValidation,
 			LSPErrorReporterForXML reporterForXML, LSPErrorReporterForXML reporterForGrammar,
@@ -123,6 +125,7 @@ public class LSPXMLParserConfiguration extends XMLModelAwareParserConfiguration 
 		super.configurePipeline();
 		configureExternalDTDPipeline();
 		configureExternalRelaxNGPipeline();
+		configureSynapseExpressionPipeline();
 	}
 
 	@Override
@@ -194,6 +197,27 @@ public class LSPXMLParserConfiguration extends XMLModelAwareParserConfiguration 
 		if (next != null) {
 			externalRelaxNGValidator.setDocumentHandler(next);
 			next.setDocumentSource(externalRelaxNGValidator);
+		}
+	}
+
+	private void configureSynapseExpressionPipeline() {
+
+		if (synapseExpressionValidator == null) {
+			synapseExpressionValidator = new SynapseExpressionValidator();
+			addCommonComponent(synapseExpressionValidator);
+			synapseExpressionValidator.reset(this);
+		}
+
+		// insert synapse expression validator after the last component in the pipeline
+		XMLDocumentSource prev = fLastComponent;
+		fLastComponent = synapseExpressionValidator;
+
+		XMLDocumentHandler next = prev.getDocumentHandler();
+		prev.setDocumentHandler(synapseExpressionValidator);
+		synapseExpressionValidator.setDocumentSource(prev);
+		if (next != null) {
+			synapseExpressionValidator.setDocumentHandler(next);
+			next.setDocumentSource(synapseExpressionValidator);
 		}
 	}
 

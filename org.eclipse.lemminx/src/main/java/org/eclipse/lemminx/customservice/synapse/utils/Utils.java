@@ -38,6 +38,7 @@ import org.eclipse.lemminx.dom.DOMDocument;
 import org.eclipse.lemminx.dom.DOMElement;
 import org.eclipse.lemminx.dom.DOMNode;
 import org.eclipse.lemminx.dom.DOMParser;
+import org.eclipse.lemminx.uriresolver.URIResolverExtensionManager;
 import org.eclipse.lsp4j.InitializeParams;
 import org.w3c.dom.Node;
 
@@ -209,9 +210,13 @@ public class Utils {
      */
     public static DOMDocument getDOMDocument(String content) {
 
+        return getDOMDocument(content, null);
+    }
+
+    public static DOMDocument getDOMDocument(String content, URIResolverExtensionManager resolverExtensionManager) {
+
         TextDocument document = new TextDocument(content, "temp");
-        DOMDocument domDocument = DOMParser.getInstance().parse(document, null);
-        return domDocument;
+        return DOMParser.getInstance().parse(document, resolverExtensionManager);
     }
 
     public static DOMElement getRootElementFromConfigXml(DOMNode document) {

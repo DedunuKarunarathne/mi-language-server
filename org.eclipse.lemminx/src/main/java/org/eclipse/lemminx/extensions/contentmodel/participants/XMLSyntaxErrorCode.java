@@ -86,7 +86,9 @@ public enum XMLSyntaxErrorCode implements IXMLErrorCode {
 	PrematureEOF, //
 	DoctypeNotAllowed, //
 	NoMorePseudoAttributes, //
-	NoGrammarConstraints;
+	NoGrammarConstraints,
+	InvalidSynapseExpressionInAttribute,
+	InvalidSynapseExpressionInContent;
 
 	private final String code;
 
@@ -123,7 +125,7 @@ public enum XMLSyntaxErrorCode implements IXMLErrorCode {
 	 * Create the LSP range from the SAX error.
 	 *
 	 * @param location
-	 * @param key
+	 * @param code
 	 * @param arguments
 	 * @param document
 	 * @return the LSP range from the SAX error.
@@ -139,6 +141,10 @@ public enum XMLSyntaxErrorCode implements IXMLErrorCode {
 		case ElementPrefixUnbound:
 		case RootElementTypeMustMatchDoctypedecl:
 			return XMLPositionUtility.selectStartTagName(offset, document);
+		case InvalidSynapseExpressionInContent:
+			return  XMLPositionUtility.selectContent(offset, document);
+		case InvalidSynapseExpressionInAttribute:
+			return XMLPositionUtility.selectAttributeValueAt(getString(arguments[0]), offset, document);
 		case EqRequiredInAttribute: {
 			String attrName = getString(arguments[1]);
 			return XMLPositionUtility.selectAttributeNameFromGivenNameAt(attrName, offset, document);
