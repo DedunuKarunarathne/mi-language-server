@@ -583,6 +583,7 @@ public class Constant {
     public static final String API_ARTIFACTS = "APIs";
     public static final String IS_MAIN_SEQUENCE = "isMainSequence";
     public static final String PROFILES = "profiles";
+    public static final String PROFILE = "profile";
     public static final String MAIN_SEQUENCE = "mainSequence";
     public static final String IS_SUPPORT_CATEGORIES = "isSupportCategories";
     public static final String MEMORY_CONFIG_KEY = "memoryConfigKey";

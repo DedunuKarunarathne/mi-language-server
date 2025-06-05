@@ -155,7 +155,7 @@ public class QueryGenerateUtils {
         definedTypeMap.put(Types.INTEGER, "INTEGER");
         definedTypeMap.put(Types.SMALLINT, "SMALLINT");
         definedTypeMap.put(Types.FLOAT, "DOUBLE");
-        definedTypeMap.put(Types.REAL, "REAL");
+        definedTypeMap.put(Types.REAL, "FLOAT");
         definedTypeMap.put(Types.DOUBLE, "DOUBLE");
         definedTypeMap.put(Types.VARCHAR, "STRING");
         definedTypeMap.put(Types.NVARCHAR, "STRING");
@@ -180,7 +180,7 @@ public class QueryGenerateUtils {
         qnameTypeMap.put(Types.INTEGER, "integer");
         qnameTypeMap.put(Types.SMALLINT, "integer");
         qnameTypeMap.put(Types.FLOAT, "float");
-        qnameTypeMap.put(Types.REAL, "double");
+        qnameTypeMap.put(Types.REAL, "float");
         qnameTypeMap.put(Types.DOUBLE, "double");
         qnameTypeMap.put(Types.VARCHAR, "string");
         qnameTypeMap.put(Types.NVARCHAR, "string");

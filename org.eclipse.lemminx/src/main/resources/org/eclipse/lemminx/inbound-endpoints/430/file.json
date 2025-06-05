@@ -396,6 +396,7 @@
               "inputType": "combo",
               "comboValues": [
                 "NONE",
+                "Name",
                 "Size",
                 "Lastmodifiedtimestamp"
               ],

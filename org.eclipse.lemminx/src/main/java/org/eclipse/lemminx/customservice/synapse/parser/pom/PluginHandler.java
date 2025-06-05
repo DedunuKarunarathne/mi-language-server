@@ -58,10 +58,12 @@ public class PluginHandler extends DefaultHandler {
         valueStartLine = locator.getLineNumber();
         valueStartColumn = locator.getColumnNumber();
         if (Constants.DEPENDENCY.equals(qName)) {
-            isDependency = true;
-            dependencyStartLine = locator.getLineNumber();
-            dependencyStartColumn = locator.getColumnNumber() - (qName.length() + 2);
-            dependencyType = "";
+            if (!isPlugin) {
+                isDependency = true;
+                dependencyStartLine = locator.getLineNumber();
+                dependencyStartColumn = locator.getColumnNumber() - (qName.length() + 2);
+                dependencyType = "";
+            }
         } else if (Constants.PLUGIN.equals(qName)) {
             isPlugin = true;
             pluginArtifactId = "";
