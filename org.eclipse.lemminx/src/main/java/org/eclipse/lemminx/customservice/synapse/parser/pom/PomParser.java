@@ -104,8 +104,7 @@ public class PomParser {
             if (value == null) {
                 return null;
             }
-            updateResponse.add(new TextEdit(new Range(initialRange, new Position(initialRange.getLine(),
-                    initialRange.getCharacter() + value.length() + 1)), value));
+            updateResponse.add(new TextEdit(new Range(initialRange, initialRange), value));
             return updateResponse;
         } catch (ParserConfigurationException e) {
             LOGGER.log(Level.SEVERE, "Error parsing the POM file : " + e.getMessage());
@@ -322,7 +321,7 @@ public class PomParser {
                             hasDependencies = true;
                             int startLine = location.getLineNumber();
                             int startColumn = location.getColumnNumber();
-                            int endColumn = startColumn + localName.length() + 3;
+                            int endColumn = startColumn + localName.length() + 2;
                             return new Position(startLine, endColumn);
                         }
                     }
