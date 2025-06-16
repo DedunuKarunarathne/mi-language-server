@@ -112,9 +112,7 @@ public class MIServer {
 
             BufferedReader reader = new BufferedReader(
                     new InputStreamReader(serverProcess.getInputStream(), StandardCharsets.UTF_8));
-
             handleKeystorePassword(reader);
-
             addServerLogger(reader);
 
             // Graceful shutdown hook
