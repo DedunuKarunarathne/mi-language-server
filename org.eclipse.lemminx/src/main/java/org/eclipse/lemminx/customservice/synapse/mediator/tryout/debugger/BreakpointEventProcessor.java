@@ -100,7 +100,7 @@ public class BreakpointEventProcessor {
         property.addProperty(TryOutConstants.CONTEXT, context);
 
         try {
-            return commandClient.sendCommandWithRetry(property.toString(), 2);
+            return commandClient.sendCommandWithRetry(property.toString());
         } catch (Exception e) {
             LOGGER.warning("Error occurred while fetching the property.");
         }

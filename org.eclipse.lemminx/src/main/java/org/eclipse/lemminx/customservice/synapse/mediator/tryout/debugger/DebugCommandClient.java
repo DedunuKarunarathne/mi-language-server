@@ -30,6 +30,7 @@ public class DebugCommandClient {
     private static final Logger LOGGER = Logger.getLogger(DebugCommandClient.class.getName());
 
     private static final String HOST = TryOutConstants.LOCALHOST;
+    private static final int DEFAULT_MAX_RETRIES = 2;
     private int port = TryOutConstants.DEFAULT_DEBUGGER_COMMAND_PORT;
     private Socket socket;
 
@@ -65,6 +66,11 @@ public class DebugCommandClient {
         var inputStream =
                 new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
         return inputStream.readLine();
+    }
+
+    public String sendCommandWithRetry(String message) {
+
+        return sendCommandWithRetry(message, DEFAULT_MAX_RETRIES);
     }
 
     public String sendCommandWithRetry(String message, int maxRetries) {
