@@ -666,6 +666,13 @@ public class SynapseLanguageService implements ISynapseLanguageService {
     }
 
     @Override
+    public CompletableFuture<String> loadDependentResources() {
+
+        String statusMessage = resourceFinder.loadDependentResources(projectUri);
+        return CompletableFuture.supplyAsync(() -> statusMessage);
+    }
+
+    @Override
     public CompletableFuture<ConnectorGeneratorResponse> generateConnector(ConnectorGenerateRequest connectorGenReq) {
         String filePath = null;
         try {
