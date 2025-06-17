@@ -52,6 +52,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
@@ -1396,6 +1397,56 @@ public class Utils {
             if (connection != null) {
                 connection.disconnect();
             }
+        }
+    }
+
+    /**
+     * Retrieves a dependency file from the local Maven repository.
+     *
+     * @param groupId    the group ID of the dependency
+     * @param artifactId the artifact ID of the dependency
+     * @param version    the version of the dependency
+     * @param type       the file type (e.g., jar, zip)
+     * @return the dependency file if it exists, otherwise null
+     */
+    public static File getDependencyFromLocalRepo(String groupId, String artifactId, String version, String type) {
+
+        String localMavenRepo = Path.of(System.getProperty(Constant.USER_HOME),  Constant.M2,
+                Constant.REPOSITORY).toString();
+        String artifactPath = Path.of(localMavenRepo, groupId.replace(Constant.DOT, File.separator), artifactId,
+                version, artifactId + Constant.HYPHEN + version + Constant.DOT + type).toString();
+        File artifactFile = new File(artifactPath);
+        if(artifactFile.exists()) {
+            logger.log(Level.INFO, "Dependency found in the local repository: " + artifactId);
+            return artifactFile;
+        } else {
+            logger.log(Level.INFO, "Dependency not found in the local repository: " + artifactId);
+            return null;
+        }
+    }
+
+    /**
+     * Copies a file to the specified destination folder.
+     *
+     * @param source the source file to copy
+     * @param destinationFolder the target folder where the file will be copied
+     * @throws IOException if an I/O error occurs during copying
+     */
+    public static void copyFile(File source, File destinationFolder) throws IOException {
+
+        if (!destinationFolder.exists()) {
+            destinationFolder.mkdirs();
+        }
+        File destinationFile = Path.of(destinationFolder.getAbsolutePath(), source.getName()).toFile();
+        try (InputStream in = new FileInputStream(source); OutputStream out = new FileOutputStream(destinationFile)) {
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = in.read(buffer)) > 0) {
+                out.write(buffer, 0, length);
+            }
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Error occurred while copying dependency from local repository: " + e.getMessage());
+            throw e;
         }
     }
 

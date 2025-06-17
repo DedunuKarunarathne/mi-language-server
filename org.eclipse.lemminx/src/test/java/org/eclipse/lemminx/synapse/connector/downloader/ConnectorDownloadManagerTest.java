@@ -15,6 +15,8 @@
 package org.eclipse.lemminx.synapse.connector.downloader;
 
 import org.eclipse.lemminx.customservice.synapse.parser.ConnectorDownloadManager;
+import org.eclipse.lemminx.customservice.synapse.parser.DependencyDetails;
+import org.eclipse.lemminx.customservice.synapse.parser.OverviewPageDetailsResponse;
 import org.eclipse.lemminx.customservice.synapse.utils.Utils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,9 +24,11 @@ import org.mockito.MockedStatic;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
+import static org.eclipse.lemminx.customservice.synapse.parser.pom.PomParser.getPomDetails;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mockStatic;
 
@@ -44,10 +48,14 @@ public class ConnectorDownloadManagerTest {
         String path = ConnectorDownloadManagerTest.class.getResource("/synapse/pom.parser/test_pom_parser").getPath();
         String projectPath = new File(path).getAbsolutePath();
         utilsMock.when(() -> Utils.downloadConnector(any(), any(), any(), any(), any())).thenAnswer(invocationOnMock -> { return null; });
-        String result = connectorDownloadManager.downloadConnectors(projectPath);
+        OverviewPageDetailsResponse pomDetailsResponse = new OverviewPageDetailsResponse();
+        getPomDetails(projectPath, pomDetailsResponse);
+        List<DependencyDetails>
+                connectorDependencies = pomDetailsResponse.getDependenciesDetails().getConnectorDependencies();
+        List<String> failedDependencies = connectorDownloadManager.downloadDependencies(projectPath, connectorDependencies);
         utilsMock.close();
 
-        assertEquals("Success", result);
+        assertEquals(0, failedDependencies.size());
     }
 
     @Test
@@ -55,9 +63,13 @@ public class ConnectorDownloadManagerTest {
         String path = ConnectorDownloadManagerTest.class.getResource("/synapse/pom.parser/test_pom_parser").getPath();
         String projectPath = new File(path).getAbsolutePath();
         utilsMock.when(() -> Utils.downloadConnector(any(), any(), any(), any(), any())).thenThrow(new IOException());
-        String result = connectorDownloadManager.downloadConnectors(projectPath);
+        OverviewPageDetailsResponse pomDetailsResponse = new OverviewPageDetailsResponse();
+        getPomDetails(projectPath, pomDetailsResponse);
+        List<DependencyDetails>
+                connectorDependencies = pomDetailsResponse.getDependenciesDetails().getConnectorDependencies();
+        List<String> failedDependencies = connectorDownloadManager.downloadDependencies(projectPath, connectorDependencies);
         utilsMock.close();
 
-        assertTrue(result.contains("Some connectors were not downloaded:"));
+        assertFalse(failedDependencies.isEmpty());
     }
 }
