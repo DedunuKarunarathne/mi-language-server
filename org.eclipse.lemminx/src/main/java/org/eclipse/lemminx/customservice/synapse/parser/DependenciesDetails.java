@@ -19,10 +19,12 @@ import java.util.List;
 public class DependenciesDetails {
 
     private List<DependencyDetails> connectorDependencies;
+    private List<DependencyDetails> integrationProjectDependencies;
     private List<DependencyDetails> otherDependencies;
 
     DependenciesDetails() {
         connectorDependencies = new ArrayList<>();
+        integrationProjectDependencies = new ArrayList<>();
         otherDependencies = new ArrayList<>();
     }
 
@@ -32,6 +34,14 @@ public class DependenciesDetails {
 
     public void addConnectorDependencies(DependencyDetails dependencyDetails) {
         connectorDependencies.add(dependencyDetails);
+    }
+
+    public List<DependencyDetails> getIntegrationProjectDependencies() {
+        return integrationProjectDependencies;
+    }
+
+    public void addIntegrationProjectDependencies(DependencyDetails dependencyDetails) {
+        integrationProjectDependencies.add(dependencyDetails);
     }
 
     public void addOtherDependencies(DependencyDetails dependencyDetails) {
