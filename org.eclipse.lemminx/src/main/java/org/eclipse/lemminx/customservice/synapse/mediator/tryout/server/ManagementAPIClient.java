@@ -22,12 +22,15 @@ import org.eclipse.lemminx.customservice.synapse.mediator.TryOutConstants;
 import org.eclipse.lemminx.customservice.synapse.mediator.tryout.pojo.DeployedArtifactType;
 import org.eclipse.lemminx.customservice.synapse.utils.Utils;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -162,8 +165,7 @@ public class ManagementAPIClient {
 
         // Build the request URL using the passed endpoint
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(String.format("https://%s:%d/management/%s", HOST,
-                        port, type.toString().toLowerCase())))
+                .uri(URI.create(String.format("https://%s:%d/management/%s", HOST, port, type.getValue())))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + accessToken)
                 .GET()
@@ -204,10 +206,43 @@ public class ManagementAPIClient {
         return nameUrlPairs;
     }
 
-    protected static class DeployedArtifact {
+    public boolean deployCAPP(File capp) {
 
-        private String name;
-        private String url;
+        try {
+            String boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW";
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(String.format("https://%s:%d/management/applications", HOST, port)))
+                    .header("Authorization", "Bearer " + accessToken)
+                    .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                    .POST(buildMultipartBody(boundary, Path.of(capp.getAbsolutePath())))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.body().contains("Successfully added Carbon Application");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public static HttpRequest.BodyPublisher buildMultipartBody(String boundary, Path filePath) throws IOException {
+
+        var byteArrays = new ArrayList<byte[]>();
+
+        String filename = filePath.getFileName().toString();
+        String partHeader = "--" + boundary + "\r\n"
+                + "Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\"\r\n"
+                + "Content-Type: application/octet-stream\r\n\r\n";
+        byteArrays.add(partHeader.getBytes(StandardCharsets.UTF_8));
+        byteArrays.add(Files.readAllBytes(filePath));
+        byteArrays.add(("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+
+        return HttpRequest.BodyPublishers.ofByteArrays(byteArrays);
+    }
+
+    public static class DeployedArtifact {
+
+        private final String name;
+        private final String url;
 
         public DeployedArtifact(String name, String url) {
 

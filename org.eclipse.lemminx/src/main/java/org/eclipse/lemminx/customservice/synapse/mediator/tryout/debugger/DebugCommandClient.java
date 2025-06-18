@@ -30,6 +30,7 @@ public class DebugCommandClient {
     private static final Logger LOGGER = Logger.getLogger(DebugCommandClient.class.getName());
 
     private static final String HOST = TryOutConstants.LOCALHOST;
+    private static final int DEFAULT_MAX_RETRIES = 2;
     private int port = TryOutConstants.DEFAULT_DEBUGGER_COMMAND_PORT;
     private Socket socket;
 
@@ -46,18 +47,46 @@ public class DebugCommandClient {
     public String sendCommand(String message) {
 
         try {
-            var outputStream = new BufferedOutputStream(socket.getOutputStream());
-
-            message += "\n";
-
-            outputStream.write(message.getBytes(StandardCharsets.UTF_8));
-            outputStream.flush();
-
-            var inputStream =
-                    new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-            return inputStream.readLine();
+            return send(message);
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Failed to send command", e);
+        }
+        return null;
+    }
+
+    private String send(String message) throws IOException {
+
+        var outputStream = new BufferedOutputStream(socket.getOutputStream());
+
+        message += "\n";
+
+        outputStream.write(message.getBytes(StandardCharsets.UTF_8));
+        outputStream.flush();
+
+        var inputStream =
+                new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+        return inputStream.readLine();
+    }
+
+    public String sendCommandWithRetry(String message) {
+
+        return sendCommandWithRetry(message, DEFAULT_MAX_RETRIES);
+    }
+
+    public String sendCommandWithRetry(String message, int maxRetries) {
+
+        int attempt = 0;
+        while (attempt < maxRetries) {
+            try {
+                return send(message);
+            } catch (IOException e) {
+                attempt++;
+                LOGGER.log(Level.WARNING, String.format("Attempt %d failed to send command", attempt), e);
+                if (attempt >= maxRetries) {
+                    LOGGER.log(Level.SEVERE, "Max retries reached. Failed to send command", e);
+                    return null;
+                }
+            }
         }
         return null;
     }

@@ -101,6 +101,8 @@ public class TryOutConstants {
             "This mediator cannot be tried out with the current request payload. Please select a different payload.";
     public static final CharSequence BREAKPOINT_ALREADY_REGISTERED = "already breakpoint enabled at mediator position";
     public static final Path PROJECT_RESOURCES_RELATIVE_PATH = Path.of("src", "main", "wso2mi", "resources");
+    public static final String POST_CLEANUP = "POST_CLEANUP";
+    public static final String IS_CONNECTOR_TEST = "IS_CONNECTOR_TEST";
 
     private TryOutConstants() {
 

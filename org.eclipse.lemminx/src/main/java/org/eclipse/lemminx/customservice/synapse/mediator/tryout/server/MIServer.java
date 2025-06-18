@@ -14,14 +14,23 @@
 
 package org.eclipse.lemminx.customservice.synapse.mediator.tryout.server;
 
+import org.eclipse.lemminx.customservice.SynapseLanguageClientAPI;
 import org.eclipse.lemminx.customservice.synapse.mediator.TryOutConstants;
-import org.eclipse.lemminx.customservice.synapse.mediator.TryOutUtils;
 import org.eclipse.lemminx.customservice.synapse.mediator.tryout.pojo.ArtifactDeploymentException;
 import org.eclipse.lemminx.customservice.synapse.mediator.tryout.pojo.DeployedArtifactType;
 import org.eclipse.lemminx.customservice.synapse.syntaxTree.SyntaxTreeGenerator;
+import org.eclipse.lemminx.customservice.synapse.syntaxTree.pojo.LocalEntry;
+import org.eclipse.lemminx.customservice.synapse.syntaxTree.pojo.MessageProcessor;
+import org.eclipse.lemminx.customservice.synapse.syntaxTree.pojo.MessageStore;
 import org.eclipse.lemminx.customservice.synapse.syntaxTree.pojo.NamedSequence;
 import org.eclipse.lemminx.customservice.synapse.syntaxTree.pojo.STNode;
 import org.eclipse.lemminx.customservice.synapse.syntaxTree.pojo.api.API;
+import org.eclipse.lemminx.customservice.synapse.syntaxTree.pojo.dataservice.Data;
+import org.eclipse.lemminx.customservice.synapse.syntaxTree.pojo.datasource.DatasourceType;
+import org.eclipse.lemminx.customservice.synapse.syntaxTree.pojo.endpoint.NamedEndpoint;
+import org.eclipse.lemminx.customservice.synapse.syntaxTree.pojo.inbound.InboundEndpoint;
+import org.eclipse.lemminx.customservice.synapse.syntaxTree.pojo.task.Task;
+import org.eclipse.lemminx.customservice.synapse.syntaxTree.pojo.template.Template;
 import org.eclipse.lemminx.customservice.synapse.utils.Utils;
 import org.eclipse.lemminx.dom.DOMDocument;
 
@@ -40,6 +49,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -58,11 +70,13 @@ public class MIServer {
 
     // Maps the artifact folder names to the corresponding folder names in the MI server.
     private static final HashMap<String, String> ARTIFACT_FOLDERS_MAP = new HashMap<>();
+    private final List<String> deployedCAAPs = new ArrayList<>();
     private final List<String> deployedFiles;
     private boolean isStarted = false;
     private boolean isStarting = false;
-    private String projectUri;
+    private final String projectUri;
     private ManagementAPIClient managementAPIClient;
+    private final SynapseLanguageClientAPI languageClient;
 
     static {
         ARTIFACT_FOLDERS_MAP.put("apis", "api");
@@ -76,11 +90,12 @@ public class MIServer {
         ARTIFACT_FOLDERS_MAP.put("templates", "templates");
     }
 
-    public MIServer(Path serverPath, String projectUri) {
+    public MIServer(Path serverPath, String projectUri, SynapseLanguageClientAPI languageClient) {
 
         this.serverPath = serverPath;
         this.projectUri = projectUri;
         deployedFiles = new ArrayList<>();
+        this.languageClient = languageClient;
     }
 
     public synchronized void startServer() {
@@ -94,14 +109,35 @@ public class MIServer {
         }
         try {
             serverProcess = startServerProcess();
-            handleKeystorePassword();
+
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(serverProcess.getInputStream(), StandardCharsets.UTF_8));
+            handleKeystorePassword(reader);
+            addServerLogger(reader);
 
             // Graceful shutdown hook
-            addShutDownHook();
+            addShutDownHook(reader);
         } catch (IOException e) {
             isStarting = false;
             LOGGER.log(Level.SEVERE, String.format("Error starting or running server: %s", e.getMessage()));
         }
+    }
+
+    private void addServerLogger(BufferedReader reader) {
+
+        Thread loggerThread = new Thread(() -> {
+            try {
+                languageClient.tryoutLog("Starting TryOut Server...\n");
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    languageClient.tryoutLog(line + System.lineSeparator());
+                }
+            } catch (IOException e) {
+                LOGGER.log(Level.SEVERE, String.format("Error handling server I/O: %s", e.getMessage()));
+            }
+        }, "Tryout-Server-Logger");
+        loggerThread.setDaemon(true);
+        loggerThread.start();
     }
 
     private synchronized void updateHotDeploymentInterval() {
@@ -164,13 +200,12 @@ public class MIServer {
         }
     }
 
-    private synchronized void handleKeystorePassword() {
+    private synchronized void handleKeystorePassword(BufferedReader reader) {
 
         // Handle password input
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(serverProcess.getInputStream(), StandardCharsets.UTF_8));
-             BufferedWriter writer = new BufferedWriter(
-                     new OutputStreamWriter(serverProcess.getOutputStream(), StandardCharsets.UTF_8))) {
+        try (
+                BufferedWriter writer = new BufferedWriter(
+                        new OutputStreamWriter(serverProcess.getOutputStream(), StandardCharsets.UTF_8))) {
 
             String line;
             while ((line = reader.readLine()) != null) {
@@ -190,10 +225,15 @@ public class MIServer {
         }
     }
 
-    private void addShutDownHook() {
+    private void addShutDownHook(BufferedReader reader) {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             LOGGER.info("Initiating graceful shutdown...");
+            try {
+                reader.close();
+            } catch (IOException e) {
+                LOGGER.log(Level.SEVERE, String.format("Error closing reader: %s", e.getMessage()));
+            }
             deleteDeployedFiles();
             shutDown();
         }));
@@ -221,12 +261,46 @@ public class MIServer {
         }
     }
 
-    public void deployProject(String tempProjectUri, String file, String projectUri)
+    public void deployProject(String tempProjectUri, String projectUri)
             throws ArtifactDeploymentException {
 
         copyToMI(tempProjectUri, projectUri);
-        waitForDeployment(Path.of(file));
+        waitForDeployment();
         LOGGER.log(Level.INFO, "Project deployed successfully");
+    }
+
+    private void waitForDeployment() throws ArtifactDeploymentException {
+
+        if (!deployedFiles.isEmpty()) {
+            List<ForkJoinTask<?>> tasks = new ArrayList<>();
+            for (String filePath : deployedFiles) {
+                ForkJoinTask<?> task = ForkJoinPool.commonPool().submit(() -> {
+                    try {
+                        waitForDeployment(Path.of(filePath));
+                    } catch (ArtifactDeploymentException e) {
+                        LOGGER.log(Level.SEVERE, "Error waiting for deployment", e);
+                    }
+                });
+                tasks.add(task);
+            }
+            List<Throwable> failures = new ArrayList<>();
+            for (ForkJoinTask<?> task : tasks) {
+                try {
+                    task.join();
+                } catch (CompletionException e) {
+                    failures.add(e.getCause());
+                } catch (Exception e) {
+                    failures.add(e);
+                }
+            }
+            if (!failures.isEmpty()) {
+                StringBuilder errorMessage = new StringBuilder("Error(s) occurred during deployment:\n");
+                for (Throwable failure : failures) {
+                    errorMessage.append(failure.getMessage()).append("\n");
+                }
+                throw new ArtifactDeploymentException(errorMessage.toString());
+            }
+        }
     }
 
     private void waitForDeployment(Path filePath) throws ArtifactDeploymentException {
@@ -243,6 +317,33 @@ public class MIServer {
                 } else if (node instanceof NamedSequence) {
                     resourceName = ((NamedSequence) node).getName();
                     type = DeployedArtifactType.SEQUENCES;
+                } else if (node instanceof NamedEndpoint) {
+                    resourceName = ((NamedEndpoint) node).getName();
+                    type = DeployedArtifactType.ENDPOINTS;
+                } else if (node instanceof LocalEntry) {
+                    resourceName = ((LocalEntry) node).getKey();
+                    type = DeployedArtifactType.LOCAL_ENTRIES;
+                } else if (node instanceof Task) {
+                    resourceName = ((Task) node).getName();
+                    type = DeployedArtifactType.TASKS;
+                } else if (node instanceof MessageStore) {
+                    resourceName = ((MessageStore) node).getName();
+                    type = DeployedArtifactType.MESSAGE_STORES;
+                } else if (node instanceof MessageProcessor) {
+                    resourceName = ((MessageProcessor) node).getName();
+                    type = DeployedArtifactType.MESSAGE_PROCESSORS;
+                } else if (node instanceof InboundEndpoint) {
+                    resourceName = ((InboundEndpoint) node).getName();
+                    type = DeployedArtifactType.INBOUND_ENDPOINTS;
+                } else if (node instanceof Template) {
+                    resourceName = ((Template) node).getName();
+                    type = DeployedArtifactType.TEMPLATES;
+                } else if (node instanceof Data) {
+                    resourceName = ((Data) node).getName();
+                    type = DeployedArtifactType.DATA_SERVICES;
+                } else if (node instanceof DatasourceType) {
+                    resourceName = ((DatasourceType) node).getName().getTextNode();
+                    type = DeployedArtifactType.DATA_SOURCES;
                 } else {
                     return;
                 }
@@ -257,18 +358,12 @@ public class MIServer {
                 throw new ArtifactDeploymentException(TryOutConstants.INVALID_ARTIFACT_ERROR);
             }
         } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, String.format("Error reading file %s: %s", filePath, e.getMessage()));
             throw new ArtifactDeploymentException(TryOutConstants.TRYOUT_FAILURE_MESSAGE, e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ArtifactDeploymentException(TryOutConstants.TRYOUT_FAILURE_MESSAGE, e);
         }
-
-    }
-
-    private boolean isDeployed() throws IOException, InterruptedException {
-
-        List<String> deployedArtifacts = managementAPIClient.getDeployedCapps();
-        return deployedArtifacts != null && deployedArtifacts.size() > 0;
     }
 
     private boolean isDeployed(ManagementAPIClient managementAPIClient, String resourceName, DeployedArtifactType type)
@@ -301,39 +396,18 @@ public class MIServer {
         }
     }
 
-    private void copyDependencyCappToMI(String projectUri) throws ArtifactDeploymentException {
+    public void copyDependencyCappToMI(String projectUri) throws ArtifactDeploymentException {
 
         Path targetPath = serverPath.resolve(TryOutConstants.MI_DEPLOYMENT_PATH);
-        try {
-            String projectId = Utils.getHash(projectUri);
-            Path projectCAPPPath = TryOutConstants.CAPP_CACHE_LOCATION.resolve(projectId);
-            if (Files.exists(projectCAPPPath)) {
-                for (File file : projectCAPPPath.toFile().listFiles()) {
-                    Utils.copyFile(file.toString(), targetPath.toString());
-                    deployedFiles.add(targetPath.resolve(file.getName()).toString());
+        String projectId = Utils.getHash(projectUri);
+        Path projectCAPPPath = TryOutConstants.CAPP_CACHE_LOCATION.resolve(projectId);
+        if (Files.exists(projectCAPPPath)) {
+            for (File file : projectCAPPPath.toFile().listFiles()) {
+                if (!managementAPIClient.deployCAPP(file)) {
+                    throw new ArtifactDeploymentException("Error waiting for CAPP deployment");
                 }
+                deployedCAAPs.add(targetPath.resolve(file.getName()).toString());
             }
-            waitForCAPPDeployment();
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Error copying the capp file to MI", e);
-        }
-    }
-
-    private void waitForCAPPDeployment() throws ArtifactDeploymentException {
-
-        boolean isDeployed = false;
-        int count = 0;
-        while (!isDeployed && count <= 5) {
-            try {
-                Thread.sleep(1000);
-                isDeployed = isDeployed();
-                count++;
-            } catch (InterruptedException | IOException e) {
-                LOGGER.log(Level.SEVERE, "Error waiting for CAPP deployment", e);
-            }
-        }
-        if (!isDeployed) {
-            throw new ArtifactDeploymentException("Error waiting for CAPP deployment");
         }
     }
 
@@ -348,20 +422,13 @@ public class MIServer {
         }
     }
 
-    private void copyRegistryResourcesToMI(String tempFolderPath) throws IOException {
+    public void deleteDeployedFiles() {
 
-        Path registryPath = Path.of(tempFolderPath).resolve(TryOutConstants.PROJECT_REGSTRY_PATH);
-        Path govRegistryPath = registryPath.resolve(TryOutConstants.GOV);
-        Path configRegistryPath = registryPath.resolve(TryOutConstants.CONF);
-
-        Path targetGovPath = serverPath.resolve(TryOutConstants.MI_GOV_PATH);
-        Path targetConfPath = serverPath.resolve(TryOutConstants.MI_CONF_PATH);
-
-        Utils.copyFolder(govRegistryPath, targetGovPath, deployedFiles);
-        Utils.copyFolder(configRegistryPath, targetConfPath, deployedFiles);
+        deleteDeployedFiles(deployedFiles);
+        deleteDeployedFiles(deployedCAAPs);
     }
 
-    public void deleteDeployedFiles() {
+    public void deleteDeployedFiles(List<String> deployedFiles) {
 
         Iterator<String> iterator = deployedFiles.iterator();
         while (iterator.hasNext()) {

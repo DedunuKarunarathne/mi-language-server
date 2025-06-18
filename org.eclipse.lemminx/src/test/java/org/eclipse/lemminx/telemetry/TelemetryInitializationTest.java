@@ -116,6 +116,11 @@ public class TelemetryInitializationTest {
 			public void removeConnectorStatus(ConnectorStatusNotification message) {
 
 			}
+
+			@Override
+			public void tryoutLog(String message) {
+
+			}
 		};
 		languageServer.setClient(client);
 		return languageServer;

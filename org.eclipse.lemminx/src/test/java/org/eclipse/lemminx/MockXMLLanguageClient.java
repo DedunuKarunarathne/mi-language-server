@@ -120,4 +120,9 @@ public class MockXMLLanguageClient implements SynapseLanguageClientAPI {
 	public void removeConnectorStatus(ConnectorStatusNotification message) {
 
 	}
+
+	@Override
+	public void tryoutLog(String message) {
+
+	}
 }

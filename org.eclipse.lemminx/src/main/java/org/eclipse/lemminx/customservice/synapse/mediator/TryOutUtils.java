@@ -79,19 +79,42 @@ public class TryOutUtils {
     /**
      * This method is used to check whether the actual breakpoint is the expected breakpoint.
      *
-     * @param actual
-     * @param expected
-     * @return
+     * @param actual the actual breakpoint data
+     * @param expected the expected breakpoint data
+     * @return true if the actual breakpoint matches the expected breakpoint, false otherwise
      */
-    public static boolean isExpectedBreakpoint(JsonObject actual, IDebugInfo expected) {
+    public static boolean isExpectedBreakpoint(JsonObject actual, JsonObject expected) {
 
-        JsonElement actualSequenceData = actual.get(Constant.SEQUENCE);
+        JsonObject actualSequenceData = actual.getAsJsonObject(Constant.SEQUENCE);
 
-        JsonObject breakpointJson = expected.toJson().getAsJsonObject();
-        JsonElement expectedSequenceData = breakpointJson.get(Constant.SEQUENCE);
+        JsonObject breakpointJson = expected.getAsJsonObject();
+        JsonObject expectedSequenceData = breakpointJson.getAsJsonObject(Constant.SEQUENCE);
 
-        return expectedSequenceData != null
-                && expectedSequenceData.equals(actualSequenceData);
+        if (actualSequenceData.has(Constant.API) && expectedSequenceData.has(Constant.API)) {
+            String expectedApiKey =
+                    expectedSequenceData.getAsJsonObject(Constant.API).get(TryOutConstants.API_KEY).getAsString();
+            String actualApiKey =
+                    actualSequenceData.getAsJsonObject(Constant.API).get(TryOutConstants.API_KEY).getAsString();
+            return expectedApiKey.equals(actualApiKey);
+        }
+        return expectedSequenceData.equals(actualSequenceData);
+    }
+
+    /**
+     * This method is used to check whether the actual breakpoint is one of the expected breakpoints.
+     *
+     * @param actual   the actual breakpoint data
+     * @param expected the list of expected breakpoints
+     * @return true if the actual breakpoint matches any of the expected breakpoints, false otherwise
+     */
+    public static boolean isExpectedBreakpoint(JsonObject actual, List<JsonObject> expected) {
+
+        for (JsonObject expectedBreakpoint : expected) {
+            if (isExpectedBreakpoint(actual, expectedBreakpoint)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -229,7 +252,7 @@ public class TryOutUtils {
                 mediator.getRange().getEndTagRange() != null ? mediator.getRange().getEndTagRange().getEnd() :
                         mediator.getRange().getStartTagRange().getEnd();
         mediatorEnd.setCharacter(mediatorEnd.getCharacter() + 1);
-        end.setCharacter(end.getCharacter() - 1);
+        end.setCharacter(end.getCharacter() == 0 ? 0 : end.getCharacter() - 1);
         doEdit(new Edit(StringUtils.EMPTY, new Range(mediatorEnd, end)), editFilePath);
     }
 
@@ -355,7 +378,7 @@ public class TryOutUtils {
                 processURLParams(getServiceUrl(api, host, port, activeBreakpoints), request.getQueryParams(),
                         request.getPathParams());
         String method = getServiceMethod(api, position);
-        return new InvocationInfo(serviceUrl, method);
+        return new InvocationInfo(serviceUrl, method, request.getInputPayload());
     }
 
     public static String processURLParams(String serviceUrl, List<Property> queryParams, List<Property> pathParams) {
@@ -534,7 +557,7 @@ public class TryOutUtils {
                 }
             }
         }
-        return null;
+        return StringUtils.EMPTY;
     }
 
     private static void populateParams(List<Property> parsedSynapseProperties, Params params) {
@@ -647,7 +670,6 @@ public class TryOutUtils {
                     }
                 }
             }
-            return null;
         }
         throw new IOException("Error while getting the mediator position");
     }

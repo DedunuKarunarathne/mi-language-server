@@ -19,18 +19,31 @@ public class InvocationInfo {
     private String serviceUrl;
     private String method;
     private boolean needStepOver;
+    private String payload;
 
-    public InvocationInfo(String serviceUrl, String method) {
+    public InvocationInfo(String serviceUrl, String method, String payload) {
 
         this.serviceUrl = serviceUrl;
         this.method = method;
+        this.payload = payload;
     }
 
-    public InvocationInfo(String serviceUrl, String method, boolean needStepOver) {
+    public InvocationInfo(String serviceUrl, String method, String payload, boolean needStepOver) {
 
         this.serviceUrl = serviceUrl;
         this.method = method;
         this.needStepOver = needStepOver;
+        this.payload = payload;
+    }
+
+    public String getPayload() {
+
+        return payload;
+    }
+
+    public void setPayload(String payload) {
+
+        this.payload = payload;
     }
 
     public String getServiceUrl() {

@@ -38,22 +38,28 @@ public class BreakpointEventProcessor {
     private boolean isFault = false;
     private List<String> inputResponse;
     private List<String> outputResponse;
+    private final List<JsonObject> activeBreakpoints;
     private IDebugInfo faultSequenceBreakpoint;
 
-    public BreakpointEventProcessor(DebugCommandClient commandClient, Object lock) {
+    public BreakpointEventProcessor(DebugCommandClient commandClient, Object lock, List<JsonObject> activeBreakpoints) {
 
         this.commandClient = commandClient;
-
+        this.activeBreakpoints = activeBreakpoints;
         this.lock = lock;
     }
 
     public void process(JsonObject eventData) {
 
+        if (!TryOutUtils.isExpectedBreakpoint(eventData, activeBreakpoints)) {
+            LOGGER.warning("Event data does not match any active breakpoints: " + eventData);
+            commandClient.sendResumeCommand();
+            return;
+        }
         List<String> properties = getProperties();
         if (isDone) {
             return;
         }
-        if (TryOutUtils.isExpectedBreakpoint(eventData, faultSequenceBreakpoint)) {
+        if (TryOutUtils.isExpectedBreakpoint(eventData, faultSequenceBreakpoint.toJson().getAsJsonObject())) {
             isFault = true;
             isDone = true;
         }
@@ -94,7 +100,7 @@ public class BreakpointEventProcessor {
         property.addProperty(TryOutConstants.CONTEXT, context);
 
         try {
-            return commandClient.sendCommand(property.toString());
+            return commandClient.sendCommandWithRetry(property.toString());
         } catch (Exception e) {
             LOGGER.warning("Error occurred while fetching the property.");
         }

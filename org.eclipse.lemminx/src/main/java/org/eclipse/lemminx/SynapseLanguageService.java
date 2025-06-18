@@ -209,7 +209,7 @@ public class SynapseLanguageService implements ISynapseLanguageService {
                 connectionHandler.init(connectorHolder);
                 MediatorFactoryFinder.init(projectServerVersion, projectUri, connectorHolder);
                 DynamicClassLoader.updateClassLoader(Path.of(projectUri, "deployment", "libs").toFile());
-                this.tryOutManager = new TryOutManager(projectUri, miServerPath, connectorHolder);
+                this.tryOutManager = new TryOutManager(projectUri, miServerPath, connectorHolder, languageClient);
             } catch (Exception e) {
                 log.log(Level.SEVERE, "Error while updating class loader for DB drivers.", e);
             }

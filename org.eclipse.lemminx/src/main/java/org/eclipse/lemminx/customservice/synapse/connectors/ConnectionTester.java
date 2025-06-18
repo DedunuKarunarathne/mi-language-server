@@ -36,11 +36,11 @@ import org.eclipse.lemminx.customservice.synapse.utils.Constant;
 import org.eclipse.lemminx.customservice.synapse.utils.Utils;
 import org.eclipse.lsp4j.Position;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -70,7 +70,7 @@ public class ConnectionTester {
         }
         String connectionType = request.getConnectionType();
         LocalEntry localEntry = new LocalEntry();
-        String key = getLocalEntryKey(request);
+        String key = updateAndGetLocalEntryKey(request);
         localEntry.setKey(key);
 
         Connector connector = connectorHolder.getConnector(connectorName);
@@ -83,9 +83,12 @@ public class ConnectionTester {
         localEntry.setContent(connectionXml);
         String localEntryXml = LocalEntrySerializer.serializeLocalEntry(localEntry);
 
-        Path tempProjectPath = CONNECTOR_PROJECT_TEMP_PATH.resolve(connectorName + "_" + UUID.randomUUID());
+        Path tempProjectPath = CONNECTOR_PROJECT_TEMP_PATH.resolve(connectorName + "_" + key);
         try {
-            tempProjectPath.toFile().mkdirs();
+            if (!tempProjectPath.toFile().mkdirs()) {
+                LOGGER.log(Level.WARNING, "Failed to create temp project directory: " + tempProjectPath);
+                return new TestConnectionResponse("Failed to create temp project directory");
+            }
             addPomFile(Path.of(projectRoot), tempProjectPath);
             createLocalEntryFile(tempProjectPath, localEntryXml, localEntry.getKey());
 
@@ -114,21 +117,6 @@ public class ConnectionTester {
         }
     }
 
-    private void copyConnectorDependencies(Path tempProjectPath, Connector connector) throws IOException {
-
-        List<File> connectorZips = connectorHolder.getConnectorZips();
-        if (connectorZips != null) {
-            File connectorZip = connectorZips.stream()
-                    .filter(file -> file.getName().startsWith(connector.getName()))
-                    .findFirst()
-                    .orElse(null);
-            if (connectorZip != null) {
-                Utils.copyFile(connectorZip.getAbsolutePath(),
-                        tempProjectPath.resolve(TryOutConstants.PROJECT_CONNECTOR_PATH).toString());
-            }
-        }
-    }
-
     private MediatorTryoutInfo getMediatorTryoutInfo(
             org.eclipse.lemminx.customservice.synapse.syntaxTree.pojo.connector.Connector testConnection,
             String tempProjectPath)
@@ -139,7 +127,10 @@ public class ConnectionTester {
         MediatorTryoutRequest mediatorTryoutRequest =
                 new MediatorTryoutRequest(apiPath, position.getLine(), position.getCharacter(),
                         "{}", null);
-        return tryOutHandler.handleIsolatedTryOut(tempProjectPath.toString(), mediatorTryoutRequest, false);
+        Properties context = new Properties();
+        context.setProperty(TryOutConstants.POST_CLEANUP, "true");
+        context.setProperty(TryOutConstants.IS_CONNECTOR_TEST, "true");
+        return tryOutHandler.handleIsolatedTryOut(tempProjectPath, mediatorTryoutRequest, false, context);
     }
 
     private void createLocalEntryFile(Path tempProjectPath, String localEntryXml, String localEntryKey)
@@ -153,14 +144,10 @@ public class ConnectionTester {
         Utils.writeToFile(localEntryPath.toString(), localEntryXml);
     }
 
-    private String getLocalEntryKey(TestConnectionRequest request) {
+    private String updateAndGetLocalEntryKey(TestConnectionRequest request) {
 
-        String key = request.getParameters().get(Constant.NAME).toString();
-        if (key == null) {
-            String uuid = UUID.randomUUID().toString();
-            key = request.getConnectorName() + "_" + uuid;
-            request.addParameter(Constant.NAME, key);
-        }
+        String key = UUID.randomUUID().toString().replaceAll("-", "_");
+        request.addParameter(Constant.NAME, key); // Replace the name with a unique key to avoid conflicts
         return key;
     }
 

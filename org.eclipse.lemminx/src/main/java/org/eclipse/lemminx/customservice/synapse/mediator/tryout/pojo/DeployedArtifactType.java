@@ -16,6 +16,27 @@ package org.eclipse.lemminx.customservice.synapse.mediator.tryout.pojo;
 
 public enum DeployedArtifactType {
 
-    APIS,
-    SEQUENCES
+    APIS("apis"),
+    SEQUENCES("sequences"),
+    ENDPOINTS("endpoints"),
+    LOCAL_ENTRIES("local-entries"),
+    TASKS("tasks"),
+    MESSAGE_STORES("message-stores"),
+    MESSAGE_PROCESSORS("message-processors"),
+    INBOUND_ENDPOINTS("inbound-endpoints"),
+    TEMPLATES("templates"),
+    DATA_SERVICES("data-services"),
+    DATA_SOURCES("data-sources");
+
+    private final String value;
+
+    DeployedArtifactType(String value) {
+
+        this.value = value;
+    }
+
+    public String getValue() {
+
+        return value;
+    }
 }

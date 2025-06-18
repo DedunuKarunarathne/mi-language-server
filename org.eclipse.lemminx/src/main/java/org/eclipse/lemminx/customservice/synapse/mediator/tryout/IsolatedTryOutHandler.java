@@ -30,6 +30,7 @@ import org.eclipse.lsp4j.Position;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -70,7 +71,7 @@ public class IsolatedTryOutHandler {
                     new MediatorTryoutRequest(tryoutApi, position.getLine(), position.getCharacter(),
                             request.getInputPayload(), null);
             mediatorTryoutRequest.setMediatorInfo(request.getMediatorInfo());
-            return tryOutHandler.handleIsolatedTryOut(tempProjectPath, mediatorTryoutRequest, false);
+            return tryOutHandler.handleIsolatedTryOut(tempProjectPath, mediatorTryoutRequest, false, new Properties());
         } catch (InvalidConfigurationException e) {
             LOGGER.log(Level.SEVERE, "Error while creating the API for the mediator tryout", e);
             return new MediatorTryoutInfo("Error while creating the API for the mediator");

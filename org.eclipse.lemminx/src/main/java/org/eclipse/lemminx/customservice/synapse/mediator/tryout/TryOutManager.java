@@ -14,6 +14,7 @@
 
 package org.eclipse.lemminx.customservice.synapse.mediator.tryout;
 
+import org.eclipse.lemminx.customservice.SynapseLanguageClientAPI;
 import org.eclipse.lemminx.customservice.synapse.connectors.ConnectionTester;
 import org.eclipse.lemminx.customservice.synapse.connectors.ConnectorHolder;
 import org.eclipse.lemminx.customservice.synapse.connectors.entity.TestConnectionRequest;
@@ -24,14 +25,15 @@ import org.eclipse.lemminx.customservice.synapse.mediator.tryout.pojo.MediatorTr
 
 public class TryOutManager {
 
-    private TryOutHandler tryOutHandler;
-    private IsolatedTryOutHandler isolatedTryOutHandler;
-    private ServerLessTryoutHandler serverLessTryoutHandler;
-    private ConnectionTester connectionTester;
+    private final TryOutHandler tryOutHandler;
+    private final IsolatedTryOutHandler isolatedTryOutHandler;
+    private final ServerLessTryoutHandler serverLessTryoutHandler;
+    private final ConnectionTester connectionTester;
 
-    public TryOutManager(String projectRoot, String miServerPath, ConnectorHolder connectorHolder) {
+    public TryOutManager(String projectRoot, String miServerPath, ConnectorHolder connectorHolder,
+                         SynapseLanguageClientAPI languageClient) {
 
-        tryOutHandler = new TryOutHandler(projectRoot, miServerPath);
+        tryOutHandler = new TryOutHandler(projectRoot, miServerPath, languageClient);
         isolatedTryOutHandler = new IsolatedTryOutHandler(tryOutHandler, projectRoot);
         serverLessTryoutHandler = new ServerLessTryoutHandler(projectRoot);
         connectionTester = new ConnectionTester(projectRoot, tryOutHandler, connectorHolder);

@@ -40,4 +40,11 @@ public interface SynapseLanguageClientAPI extends XMLLanguageClientAPI {
     @JsonNotification("removeConnectorStatus")
     void removeConnectorStatus(ConnectorStatusNotification message);
 
+    /**
+     * Notification to be sent to the client when a tryout server log is generated.
+     *
+     * @param message the server log message
+     */
+    @JsonNotification("tryoutLog")
+    void tryoutLog(String message);
 }

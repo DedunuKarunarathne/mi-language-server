@@ -76,6 +76,8 @@ public class DebugEventClient extends Thread {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 LOGGER.log(Level.SEVERE, "Failed to listen for events", e);
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "An error occurred while listening the event", e);
             }
         }
     }
@@ -96,6 +98,11 @@ public class DebugEventClient extends Thread {
         }
     }
 
+    public void clearEventQueue() {
+
+        eventQueue.clear();
+    }
+
     private class DebugEventListener implements Runnable {
 
         @Override
@@ -106,7 +113,7 @@ public class DebugEventClient extends Thread {
             }
         }
 
-        public String listen() {
+        public void listen() {
 
             try {
                 InputStream inputStream = socket.getInputStream();
@@ -128,7 +135,6 @@ public class DebugEventClient extends Thread {
             } catch (IOException e) {
                 LOGGER.log(Level.SEVERE, "Failed to listen for events", e);
             }
-            return null;
         }
     }
 }
