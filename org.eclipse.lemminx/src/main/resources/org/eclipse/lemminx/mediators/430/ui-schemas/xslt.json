@@ -97,7 +97,8 @@
                     "inputType": "registry",
                     "defaultValue": "",
                     "required": false,
-                    "helpTip": ""
+                    "helpTip": "",
+                    "keyType": ["xslt", "xsl", "xsd"]
                   }
                 }
               ]
