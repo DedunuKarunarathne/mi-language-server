@@ -96,10 +96,11 @@
                   "value": {
                     "name": "resourceRegistryKey",
                     "displayName": "Resource Registry Key",
-                    "inputType": "registry",
+                    "inputType": "resource",
                     "defaultValue": "",
                     "required": false,
-                    "helpTip": ""
+                    "helpTip": "",
+                    "keyType": ["xslt", "xsl", "xsd"]
                   }
                 }
               ]

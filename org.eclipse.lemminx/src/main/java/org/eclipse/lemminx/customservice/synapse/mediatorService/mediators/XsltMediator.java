@@ -14,6 +14,7 @@
 
 package org.eclipse.lemminx.customservice.synapse.mediatorService.mediators;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.lemminx.customservice.synapse.mediatorService.MediatorUtils;
 import org.eclipse.lemminx.customservice.synapse.syntaxTree.pojo.mediator.core.MediatorProperty;
 import org.eclipse.lemminx.customservice.synapse.syntaxTree.pojo.mediator.transformation.xslt.Xslt;
@@ -115,11 +116,13 @@ public class XsltMediator {
     public static Map<String, Object> getDataFromST430(Xslt node) {
 
         Map<String, Object> data = new HashMap<>();
-        data.put("sourceXPath", Map.of(
-                "isExpression", true,
-                "value", node.getSource(),
-                "namespaces", MediatorUtils.transformNamespaces(node.getNamespaces())
-        ));
+        if (StringUtils.isNotBlank(node.getSource())) {
+            data.put("sourceXPath", Map.of(
+                    "isExpression", true,
+                    "value", node.getSource(),
+                    "namespaces", MediatorUtils.transformNamespaces(node.getNamespaces())
+            ));
+        }
 
         // Process description
         data.put("description", node.getDescription());
