@@ -74,7 +74,7 @@ public class ConfigFinder {
         File[] listOfFiles = folder.listFiles();
         if (listOfFiles != null) {
             for (File file : listOfFiles) {
-                if (file.isFile() && Utils.isXml(file)) {
+                if (file.isFile() && (Utils.isXml(file) || file.getName().endsWith(".dbs"))) {
                     DOMDocument domDocument = Utils.getDOMDocument(file);
                     if (domDocument != null) {
                         DOMElement rootElement = Utils.getRootElementFromConfigXml(domDocument);
