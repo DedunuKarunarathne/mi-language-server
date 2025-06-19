@@ -98,6 +98,9 @@ public class SynapseDefinitionProvider {
             } else if (Constant.STORE.equalsIgnoreCase(node.getNodeName())) {
                 type = "message-stores";
                 key = node.getAttribute(Constant.MESSAGE_STORE);
+            } else if ("dataServiceCall".equals(node.getNodeName())) {
+                type = "data-services";
+                key = node.getAttribute(Constant.SERVICE_NAME);
             } else {
                 if (sequenceAttributes.contains(clickedAttr.getNodeName())) {
                     type = "sequences";
