@@ -71,6 +71,7 @@ public class DirectoryTreeBuilder {
     private static final String JAVA = "java";
     private static String projectPath;
     private static String mainSequence;
+    private static List<String> artifactResourcePaths = new ArrayList<>();
 
     public static DirectoryMapResponse buildDirectoryTree(WorkspaceFolder projectFolder) {
 
@@ -255,6 +256,7 @@ public class DirectoryTreeBuilder {
 
     private static void analyzeIntegrationProject(IntegrationDirectoryTree directoryTree) {
 
+        artifactResourcePaths = new ArrayList<>();
         analyzeArtifacts(directoryTree);
         analyzeResources(directoryTree);
         analyzeJavaProjects(directoryTree);
@@ -264,6 +266,7 @@ public class DirectoryTreeBuilder {
 
     private static void analyzeDistributionProject(DistributionDirectoryTree directoryTree) {
 
+        artifactResourcePaths = new ArrayList<>();
         File folder = new File(projectPath);
         if (folder != null && folder.exists() && !folder.isHidden()) {
             String folderName = folder.getName();
@@ -487,7 +490,10 @@ public class DirectoryTreeBuilder {
                 FileNode fileNodeComponent = new FileNode(name, filePath);
                 folderNode.addFile(fileNodeComponent);
                 if (directoryTree != null) {
-                    addResourceToIntegrationTree(directoryTree, filePath);
+                    if (!artifactResourcePaths.contains(filePath)) {
+                        addResourceToIntegrationTree(directoryTree, filePath);
+                        artifactResourcePaths.add(filePath);
+                    }
                 }
             } else if (file.isDirectory() && !file.isHidden()) {
                 String name = file.getName();
