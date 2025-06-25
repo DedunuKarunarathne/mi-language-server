@@ -74,7 +74,7 @@ public class ConnectorDownloadManager {
                 } else if ((existingArtifact = getDependencyFromLocalRepo(dependency.getGroupId(),
                         dependency.getArtifact(), dependency.getVersion(), dependency.getType())) != null ) {
                     LOGGER.log(Level.INFO, "Copying dependency from local repository: " + connector.getName());
-                    copyFile(existingArtifact, downloadDirectory);
+                    copyFile(existingArtifact.getPath(), downloadDirectory.getPath());
                 } else {
                     LOGGER.log(Level.INFO, "Downloading dependency: " + connector.getName());
                     Utils.downloadConnector(dependency.getGroupId(), dependency.getArtifact(),
@@ -204,7 +204,7 @@ public class ConnectorDownloadManager {
              // Try to find the driver in local Maven repository first
              File localDriverFile = getDriverFromLocalRepo(groupId, artifactId, version);
              if (localDriverFile != null) {
-                 copyFile(localDriverFile, driversDirectory);
+                 copyFile(localDriverFile.getPath(), driversDirectory.getPath());
                  return new File(driversDirectory, localDriverFile.getName()).getAbsolutePath();
              }
  

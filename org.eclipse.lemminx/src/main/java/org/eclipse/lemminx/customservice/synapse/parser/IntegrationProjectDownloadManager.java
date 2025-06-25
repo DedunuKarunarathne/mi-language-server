@@ -146,7 +146,7 @@ public class IntegrationProjectDownloadManager {
             if (existingArtifact != null) {
                 LOGGER.log(Level.INFO, "Copying dependency from local repository: " + dependencyFile.getName());
                 try {
-                    copyFile(existingArtifact, downloadDirectory);
+                    copyFile(existingArtifact.getPath(), downloadDirectory.getPath());
                 } catch (IOException e) {
                     String failedDependency =
                             dependency.getGroupId() + "-" + dependency.getArtifact() + "-" + dependency.getVersion();

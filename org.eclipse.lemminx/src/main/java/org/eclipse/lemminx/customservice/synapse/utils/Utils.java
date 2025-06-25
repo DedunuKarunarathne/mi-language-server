@@ -1425,31 +1425,6 @@ public class Utils {
         }
     }
 
-    /**
-     * Copies a file to the specified destination folder.
-     *
-     * @param source the source file to copy
-     * @param destinationFolder the target folder where the file will be copied
-     * @throws IOException if an I/O error occurs during copying
-     */
-    public static void copyFile(File source, File destinationFolder) throws IOException {
-
-        if (!destinationFolder.exists()) {
-            destinationFolder.mkdirs();
-        }
-        File destinationFile = Path.of(destinationFolder.getAbsolutePath(), source.getName()).toFile();
-        try (InputStream in = new FileInputStream(source); OutputStream out = new FileOutputStream(destinationFile)) {
-            byte[] buffer = new byte[1024];
-            int length;
-            while ((length = in.read(buffer)) > 0) {
-                out.write(buffer, 0, length);
-            }
-        } catch (Exception e) {
-            logger.log(Level.SEVERE, "Error occurred while copying dependency from local repository: " + e.getMessage());
-            throw e;
-        }
-    }
-
     public static boolean isValidProject(String projectRoot) {
 
         if (StringUtils.isEmpty(projectRoot)) {
