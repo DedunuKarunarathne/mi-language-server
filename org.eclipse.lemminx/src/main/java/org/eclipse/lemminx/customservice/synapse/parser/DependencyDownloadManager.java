@@ -38,17 +38,24 @@ public class DependencyDownloadManager {
 
         OverviewPageDetailsResponse pomDetailsResponse = new OverviewPageDetailsResponse();
         getPomDetails(projectPath, pomDetailsResponse);
-        List<DependencyDetails> connectorDependencies = pomDetailsResponse.getDependenciesDetails().getConnectorDependencies();
-        List<DependencyDetails> integrationProjectDependencies = pomDetailsResponse.getDependenciesDetails().getIntegrationProjectDependencies();
-        List<String> failedConnectorDependencies = ConnectorDownloadManager.downloadDependencies(projectPath, connectorDependencies);
-        List<String> failedIntegrationProjectDependencies = IntegrationProjectDownloadManager.downloadDependencies(projectPath, integrationProjectDependencies);
+        List<DependencyDetails> connectorDependencies =
+                pomDetailsResponse.getDependenciesDetails().getConnectorDependencies();
+        List<DependencyDetails> integrationProjectDependencies =
+                pomDetailsResponse.getDependenciesDetails().getIntegrationProjectDependencies();
+        List<String> failedConnectorDependencies =
+                ConnectorDownloadManager.downloadDependencies(projectPath, connectorDependencies);
+        List<String> failedIntegrationProjectDependencies =
+                IntegrationProjectDownloadManager.downloadDependencies(projectPath, integrationProjectDependencies);
         if (!failedConnectorDependencies.isEmpty()) {
-            LOGGER.log(Level.SEVERE, "Some connectors were not downloaded: " + String.join(", ", failedConnectorDependencies));
+            LOGGER.log(Level.SEVERE,
+                    "Some connectors were not downloaded: " + String.join(", ", failedConnectorDependencies));
             return "Some connectors were not downloaded: " + String.join(", ", failedConnectorDependencies);
         }
         if (!failedIntegrationProjectDependencies.isEmpty()) {
-            LOGGER.log(Level.SEVERE, "Some integration project dependencies were not downloaded: " + String.join(", ", failedIntegrationProjectDependencies));
-            return "Some integration project dependencies were not downloaded: " + String.join(", ", failedIntegrationProjectDependencies);
+            LOGGER.log(Level.SEVERE, "Some integration project dependencies were not downloaded: " +
+                    String.join(", ", failedIntegrationProjectDependencies));
+            return "Some integration project dependencies were not downloaded: " +
+                    String.join(", ", failedIntegrationProjectDependencies);
         }
         return "Success";
     }

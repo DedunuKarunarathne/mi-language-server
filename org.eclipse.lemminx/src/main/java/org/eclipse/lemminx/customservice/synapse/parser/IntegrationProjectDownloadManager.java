@@ -154,7 +154,7 @@ public class IntegrationProjectDownloadManager {
                             "Error occurred while downloading dependency " + failedDependency + ": " + e.getMessage());
                 }
             } else {
-                // if the dependency is not found in the local repository, download it from the remote repository
+                // TODO: Download the dependency from the remote repository if not found in the local repository
             }
         }
         return dependencyFile;
@@ -177,7 +177,8 @@ public class IntegrationProjectDownloadManager {
         try (ZipFile zipFile = new ZipFile(carFile)) {
             ZipEntry descriptorEntry = zipFile.getEntry("descriptor.xml");
             if (descriptorEntry == null) {
-                throw new Exception("descriptor.xml not found in .car file: " + carFile.getName());
+                LOGGER.log(Level.INFO, "descriptor.xml not found in .car file: " + carFile.getName());
+                return dependencies; // Return empty list if descriptor.xml is missing
             }
 
             InputStream inputStream = zipFile.getInputStream(descriptorEntry);

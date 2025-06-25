@@ -120,7 +120,7 @@ public abstract class AbstractResourceFinder {
         Path projectDependenciesTempDir = Path.of(System.getProperty(Constant.USER_HOME), Constant.WSO2_MI,
                 Constant.INTEGRATION_PROJECT_DEPENDENCIES);
         // Pattern to match the project dependency dir in cached dir
-        String projectDependencyDirPattern = "^" + projectName + "_[a-zA-Z0-9]+$";
+        final String projectDependencyDirPattern = "^" + projectName + "_[a-zA-Z0-9]+$";
 
         try (var projectDirs = list(projectDependenciesTempDir)) {
             // Find the dependency directory for the current project
