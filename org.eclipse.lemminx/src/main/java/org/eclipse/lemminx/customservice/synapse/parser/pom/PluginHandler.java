@@ -222,6 +222,8 @@ public class PluginHandler extends DefaultHandler {
                 dependency.setRange(getRange(dependencyStartLine, dependencyStartColumn, valueEndLine, valueEndColumn));
                 if (Constants.ZIP.equals(dependencyType)) {
                     pomDetailsResponse.getDependenciesDetails().addConnectorDependencies(dependency);
+                } else if (Constants.CAR.equals(dependencyType)) {
+                    pomDetailsResponse.getDependenciesDetails().addIntegrationProjectDependencies(dependency);
                 } else {
                     pomDetailsResponse.getDependenciesDetails().addOtherDependencies(dependency);
                 }
