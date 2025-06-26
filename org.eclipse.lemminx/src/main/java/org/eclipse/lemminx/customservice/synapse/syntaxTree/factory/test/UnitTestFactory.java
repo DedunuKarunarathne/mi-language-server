@@ -205,8 +205,10 @@ public class UnitTestFactory extends AbstractFactory {
         if (children != null && !children.isEmpty()) {
             List<STNode> connectorResourceList = new ArrayList<>();
             for (DOMNode child : children) {
-                STNode connectorResource = createSimpleNode((DOMElement) child);
-                connectorResourceList.add(connectorResource);
+                if (Constant.CONNECTOR_RESOURCE.equalsIgnoreCase(child.getLocalName())) {
+                    STNode connectorResource = createSimpleNode((DOMElement) child);
+                    connectorResourceList.add(connectorResource);
+                }
             }
             connectorResources.setConnectorResources(connectorResourceList.toArray(
                     new STNode[connectorResourceList.size()]));
