@@ -22,11 +22,8 @@ import org.eclipse.lemminx.customservice.synapse.utils.Constant;
 
 import java.nio.file.Path;
 import java.util.List;
-<<<<<<< main
 import java.util.ListIterator;
-=======
 import java.util.Map;
->>>>>>> main
 
 public class NewProjectResourceFinder extends AbstractResourceFinder {
 
