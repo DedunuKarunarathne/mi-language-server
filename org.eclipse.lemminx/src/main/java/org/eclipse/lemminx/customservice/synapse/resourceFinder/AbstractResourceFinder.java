@@ -49,7 +49,7 @@ public abstract class AbstractResourceFinder {
     private static final String REGISTRY = "REGISTRY";
     private static final String LOCAL_ENTRY = "LOCAL_ENTRY";
     protected static final List<String> resourceFromRegistryOnly = List.of("dataMapper", "js", "json", "smooksConfig",
-            "wsdl", "ws_policy", "xsd", "xsl", "xslt", "yaml", "registry", "schema", "swagger");
+            "wsdl", "ws_policy", "xsd", "xsl", "xslt", "yaml", "registry", "unitTestRegistry", "schema", "swagger");
 
     // This has the xml tag mapping for each artifact type
     private static final Map<String, String> typeToXmlTagMap = new HashMap<>();
@@ -148,7 +148,8 @@ public abstract class AbstractResourceFinder {
         List<Resource> resources = new ArrayList<>();
         File folder = registryPath.toFile();
         boolean isRegistryTypeRequested =
-                requestedResources.stream().anyMatch(requestedResource -> "registry".equals(requestedResource.type));
+                requestedResources.stream().anyMatch(requestedResource -> "registry".equals(requestedResource.type) ||
+                        "unitTestRegistry".equals(requestedResource.type));
         if (isRegistryTypeRequested) {
             traverseFolder(folder, null, null, resources);
         } else {

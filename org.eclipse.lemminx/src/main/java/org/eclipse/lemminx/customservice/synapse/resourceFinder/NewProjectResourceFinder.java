@@ -14,6 +14,7 @@
 
 package org.eclipse.lemminx.customservice.synapse.resourceFinder;
 
+import org.eclipse.lemminx.customservice.synapse.resourceFinder.pojo.RegistryResource;
 import org.eclipse.lemminx.customservice.synapse.resourceFinder.pojo.RequestedResource;
 import org.eclipse.lemminx.customservice.synapse.resourceFinder.pojo.Resource;
 import org.eclipse.lemminx.customservice.synapse.resourceFinder.pojo.ResourceResponse;
@@ -21,6 +22,7 @@ import org.eclipse.lemminx.customservice.synapse.utils.Constant;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.ListIterator;
 
 public class NewProjectResourceFinder extends AbstractResourceFinder {
 
@@ -49,7 +51,25 @@ public class NewProjectResourceFinder extends AbstractResourceFinder {
 
         Path registryPath = Path.of(projectPath, Constant.SRC, Constant.MAIN, Constant.WSO2MI, Constant.RESOURCES);
         List<Resource> resourcesInRegistry = findResourceInRegistry(registryPath, types);
+        if (types.stream().anyMatch(requestedResource ->  "unitTestRegistry".equals(requestedResource.type))) {
+            filterResourcesForUnitTestRegistry(resourcesInRegistry);
+        }
         response.setRegistryResources(resourcesInRegistry);
+    }
+
+    private void filterResourcesForUnitTestRegistry(List<Resource> resourcesInRegistry) {
+        ListIterator<Resource> resources = resourcesInRegistry.listIterator();
+        while (resources.hasNext()) {
+            Resource resource = resources.next();
+            String name = resource.getName();
+            if (name.endsWith("dm-utils.ts") || name.endsWith(".gitkeep")) {
+                resources.remove();
+            } else if (((RegistryResource) resource).getRegistryKey().contains("datamapper") && name.endsWith(".ts")) {
+                RegistryResource registryResource = ((RegistryResource) resource);
+                registryResource.setRegistryKey(registryResource.getRegistryKey().
+                        substring(0, registryResource.getRegistryKey().length() - 3));
+            }
+        }
     }
 
     @Override
