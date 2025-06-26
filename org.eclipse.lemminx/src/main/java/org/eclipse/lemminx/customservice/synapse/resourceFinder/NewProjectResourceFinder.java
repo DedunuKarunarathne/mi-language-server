@@ -22,7 +22,11 @@ import org.eclipse.lemminx.customservice.synapse.utils.Constant;
 
 import java.nio.file.Path;
 import java.util.List;
+<<<<<<< main
 import java.util.ListIterator;
+=======
+import java.util.Map;
+>>>>>>> main
 
 public class NewProjectResourceFinder extends AbstractResourceFinder {
 
@@ -34,6 +38,14 @@ public class NewProjectResourceFinder extends AbstractResourceFinder {
         findArtifactResources(projectPath, types, response);
         findRegistryResources(projectPath, types, response);
 
+        Map<String, ResourceResponse> dependentResourcesMap = getDependentResourcesMap();
+        for (RequestedResource type : types) {
+            String resourceType = type.getType();
+            if (dependentResourcesMap.containsKey(resourceType)) {
+                ResourceResponse dependentResponse = dependentResourcesMap.get(resourceType);
+                mergeResourceResponses(response, dependentResponse);
+            }
+        }
         return response;
     }
 

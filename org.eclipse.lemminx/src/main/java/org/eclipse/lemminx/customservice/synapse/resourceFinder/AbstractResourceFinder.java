@@ -42,6 +42,10 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static java.nio.file.Files.exists;
+import static java.nio.file.Files.isDirectory;
+import static java.nio.file.Files.list;
+
 public abstract class AbstractResourceFinder {
 
     private static final Logger LOGGER = Logger.getLogger(AbstractResourceFinder.class.getName());
@@ -53,6 +57,7 @@ public abstract class AbstractResourceFinder {
 
     // This has the xml tag mapping for each artifact type
     private static final Map<String, String> typeToXmlTagMap = new HashMap<>();
+    protected Map<String, ResourceResponse> dependentResourcesMap = new HashMap<>();
 
     static {
 
@@ -76,6 +81,124 @@ public abstract class AbstractResourceFinder {
         typeToXmlTagMap.put("xslt", "xsl:stylesheet");
         typeToXmlTagMap.put("xsd", "xs:schema");
         typeToXmlTagMap.put("wsdl", "wsdl:definitions");
+    }
+
+    public void initDependentResourcesMap() {
+        dependentResourcesMap.put("endpoint", new ResourceResponse());
+        dependentResourcesMap.put("sequence", new ResourceResponse());
+        dependentResourcesMap.put("messageStore", new ResourceResponse());
+        dependentResourcesMap.put("messageProcessor", new ResourceResponse());
+        dependentResourcesMap.put("endpointTemplate", new ResourceResponse());
+        dependentResourcesMap.put("sequenceTemplate", new ResourceResponse());
+        dependentResourcesMap.put("localEntry", new ResourceResponse());
+        dependentResourcesMap.put("inbound-endpoint", new ResourceResponse());
+        dependentResourcesMap.put("dataService", new ResourceResponse());
+        dependentResourcesMap.put("dataSource", new ResourceResponse());
+        dependentResourcesMap.put("ws_policy", new ResourceResponse());
+        dependentResourcesMap.put("smooksConfig", new ResourceResponse());
+        dependentResourcesMap.put("xsl", new ResourceResponse());
+        dependentResourcesMap.put("xslt", new ResourceResponse());
+        dependentResourcesMap.put("xsd", new ResourceResponse());
+        dependentResourcesMap.put("wsdl", new ResourceResponse());
+    }
+
+    /**
+     * Loads dependent resources for the given project path.
+     * <p>
+     * This method initializes the dependent resources map and attempts to locate
+     * the dependencies directory for the specified project. If found, it iterates
+     * through each dependent project, finds resources of each type, and merges them
+     * into the dependent resources map.
+     *
+     * @param projectPath the absolute path to the project whose dependencies are to be loaded
+     * @throws RuntimeException if an I/O error occurs while accessing the dependencies
+     */
+    public String loadDependentResources(String projectPath) {
+
+        initDependentResourcesMap();
+        String projectName = Path.of(projectPath).getFileName().toString();
+        Path projectDependenciesTempDir = Path.of(System.getProperty(Constant.USER_HOME), Constant.WSO2_MI,
+                Constant.INTEGRATION_PROJECT_DEPENDENCIES);
+        // Pattern to match the project dependency dir in cached dir
+        final String projectDependencyDirPattern = "^" + projectName + "_[a-zA-Z0-9]+$";
+
+        try (var projectDirs = list(projectDependenciesTempDir)) {
+            // Find the dependency directory for the current project
+            Path projectDependencyDir = projectDirs
+                    .filter(path -> {
+                        return path.getFileName().toString().matches(projectDependencyDirPattern) && isDirectory(path);
+                    })
+                    .findFirst()
+                    .orElse(null);
+            if (projectDependencyDir != null) {
+                // Each dependency CAR will be extracted and stored as an integration project in the EXTRACTED directory
+                Path extractedDir = projectDependencyDir.resolve(Constant.EXTRACTED);
+                if (exists(extractedDir) && isDirectory(extractedDir)) {
+                    Map<String, ResourceResponse> dependentResourcesMap = getDependentResourcesMap();
+                    try (var dependentProjects = list(extractedDir)) {
+                        // Iterate over each dependent project directory
+                        for (Path dependentProject : dependentProjects.toArray(Path[]::new)) {
+                            if (isDirectory(dependentProject)) {
+                                // For each resource type, find and merge resources from the dependent project
+                                for (Map.Entry<String, ResourceResponse> entry : dependentResourcesMap.entrySet()) {
+                                    String type = entry.getKey();
+                                    ResourceResponse dependentResources = entry.getValue();
+
+                                    RequestedResource requestedResource = new RequestedResource(type, true);
+                                    ResourceResponse resources =
+                                            findResources(dependentProject.toString(), List.of(requestedResource));
+                                    mergeResourceResponses(dependentResources, resources);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            LOGGER.warning("Failed to load dependent resources for project: " + projectPath + ". Error: " + e.getMessage());
+            return "Failed to load dependent resources for project: " + projectPath;
+        }
+        return "Dependent resources loaded successfully for project: " + projectPath;
+    }
+
+    public Map<String, ResourceResponse> getDependentResourcesMap() {
+
+        return dependentResourcesMap;
+    }
+
+    /**
+     * Merges the resources and registry resources from two {@link ResourceResponse} objects.
+     * <p>
+     * If both responses are non-null, their resource lists and registry resource lists are combined to {@code response1}.
+     * If {@code response1} is null, a new {@link ResourceResponse} is created and populated with the resources from {@code response2}.
+     *
+     * @param response1 the target {@link ResourceResponse} to merge into (may be null)
+     * @param response2 the source {@link ResourceResponse} to merge from (may be null)
+     */
+    protected void mergeResourceResponses(ResourceResponse response1, ResourceResponse response2) {
+
+        if (response1 != null && response2 != null) {
+            List<Resource> resources = response1.getResources();
+            if (resources == null) {
+                resources = new ArrayList<>();
+            }
+            if (response2.getResources() != null) {
+                resources.addAll(response2.getResources());
+            }
+            response1.setResources(resources);
+            List<Resource> registryResources = response1.getRegistryResources();
+            if (registryResources == null) {
+                registryResources = new ArrayList<>();
+            }
+            if (response2.getRegistryResources() != null) {
+                registryResources.addAll(response2.getRegistryResources());
+            }
+            response1.setRegistryResources(registryResources);
+        } else if (response1 == null) {
+            response1 = new ResourceResponse();
+            response1.setResources(response2.getResources());
+            response1.setRegistryResources(response2.getRegistryResources());
+        }
     }
 
     public ResourceResponse getAvailableResources(String uri, Either<String, List<RequestedResource>> resourceTypes) {

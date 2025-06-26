@@ -237,6 +237,9 @@ public interface ISynapseLanguageService {
     CompletableFuture<String> updateConnectorDependencies();
 
     @JsonRequest
+    CompletableFuture<String> loadDependentResources();
+
+    @JsonRequest
     CompletableFuture<TestConnectionResponse> testConnectorConnection(TestConnectionRequest request);
 
     @JsonRequest

@@ -410,6 +410,7 @@ public class Constant {
     public static final String PROJECT = "project";
     public static final String CONNECTOR = "connector";
     public static final String DOT = ".";
+    public static final String HYPHEN = "-";
     public static final String XML = "xml";
     public static final String LOCAL_ENTRIES = "local-entries";
     public static final CharSequence GOV_REGISTRY_PREFIX = "gov:";
@@ -423,6 +424,7 @@ public class Constant {
     public static final String CALL_TEMPLATE = "call-template";
     public static final String STORE = "store";
     public static final String DEPENDENCY = "dependency";
+    public static final String INTEGRATION_PROJECT_DEPENDENCIES = "integration-project-dependencies";
     public static final String COMPONENT = "component";
     public static final String INCLUDE = "include";
     public static final String KEY_EXPRESSION = "key-expression";
@@ -521,6 +523,7 @@ public class Constant {
     public static final String NAMESPACES = "namespaces";
     public static final String CONNECTION_NAME = "connectionName";
     public static final String ZIP_EXTENSION = ".zip";
+    public static final String CAR_EXTENSION = ".car";
     public static final String JAR_EXTENSION = ".jar";
     public static final String ZIP_EXTENSION_NO_DOT = "zip";
     public static final String JAR_EXTENSION_NO_DOT = "jar";
