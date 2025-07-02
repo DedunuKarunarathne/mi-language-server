@@ -306,7 +306,7 @@ public class AIConnectorHandler {
             Map<?, ?> expression = (Map<?, ?>) data.get(TOOL_RESULT_EXPRESSION);
             Object value = expression.get(Constant.VALUE);
             if (value instanceof String && StringUtils.isNotEmpty(value.toString())) {
-                toolData.put(RESULT_EXPRESSION, value.toString());
+                toolData.put(RESULT_EXPRESSION, String.format("${%s}", value));
             }
         } else if (data.containsKey(Constant.RESPONSE_VARIABLE)) {
             String variableName;
