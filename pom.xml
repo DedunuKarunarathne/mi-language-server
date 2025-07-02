@@ -288,7 +288,7 @@
 					<version>3.0.0-M6</version>
 					<configuration>
 						<tagNameFormat>@{project.version}</tagNameFormat>
-						<arguments>-DskipTests=true -Dcbi.jarsigner.skip=false -Pci,generate-p2</arguments>
+						<arguments>-DskipTests=true -Dcbi.jarsigner.skip=false -Pci</arguments>
 					</configuration>
 				</plugin>
 				<plugin>
@@ -300,17 +300,24 @@
 		</pluginManagement>
 	</build>
 	<distributionManagement>
-		<snapshotRepository>
-			<id>wso2.snapshots</id>
-			<name>Apache Snapshot Repository</name>
-			<url>https://maven.wso2.org/nexus/content/repositories/snapshots/</url>
-		</snapshotRepository>
 		<repository>
-			<id>nexus-releases</id>
-			<name>WSO2 Release Distribution Repository</name>
-			<url>https://maven.wso2.org/nexus/service/local/staging/deploy/maven2/</url>
+			<id>dummy-repo</id>
+			<url>file://${project.build.directory}/dummy-repo</url>
 		</repository>
 	</distributionManagement>
+
+	<!--	<distributionManagement>-->
+<!--		<snapshotRepository>-->
+<!--			<id>wso2.snapshots</id>-->
+<!--			<name>Apache Snapshot Repository</name>-->
+<!--			<url>https://maven.wso2.org/nexus/content/repositories/snapshots/</url>-->
+<!--		</snapshotRepository>-->
+<!--		<repository>-->
+<!--			<id>nexus-releases</id>-->
+<!--			<name>WSO2 Release Distribution Repository</name>-->
+<!--			<url>https://maven.wso2.org/nexus/service/local/staging/deploy/maven2/</url>-->
+<!--		</repository>-->
+<!--	</distributionManagement>-->
 	<profiles>
 		<profile>
 			<id>ci</id>
