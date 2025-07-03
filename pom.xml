@@ -4,7 +4,7 @@
 	<artifactId>mi-language-server-parent</artifactId>
 	<version>0.24.0-wso2v69-SNAPSHOT</version>
 	<packaging>pom</packaging>
-	<name>Eclipse LemMinX</name>
+	<name>MI Language Server - Parent</name>
 	<description>LemMinX is a XML Language Server Protocol (LSP), and can be used with any editor that supports LSP, to offer an outstanding XML editing experience</description>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -300,24 +300,17 @@
 		</pluginManagement>
 	</build>
 	<distributionManagement>
+		<snapshotRepository>
+			<id>wso2.snapshots</id>
+			<name>Apache Snapshot Repository</name>
+			<url>https://maven.wso2.org/nexus/content/repositories/snapshots/</url>
+		</snapshotRepository>
 		<repository>
-			<id>dummy-repo</id>
-			<url>file://${project.build.directory}/dummy-repo</url>
+			<id>nexus-releases</id>
+			<name>WSO2 Release Distribution Repository</name>
+			<url>https://maven.wso2.org/nexus/service/local/staging/deploy/maven2/</url>
 		</repository>
 	</distributionManagement>
-
-	<!--	<distributionManagement>-->
-<!--		<snapshotRepository>-->
-<!--			<id>wso2.snapshots</id>-->
-<!--			<name>Apache Snapshot Repository</name>-->
-<!--			<url>https://maven.wso2.org/nexus/content/repositories/snapshots/</url>-->
-<!--		</snapshotRepository>-->
-<!--		<repository>-->
-<!--			<id>nexus-releases</id>-->
-<!--			<name>WSO2 Release Distribution Repository</name>-->
-<!--			<url>https://maven.wso2.org/nexus/service/local/staging/deploy/maven2/</url>-->
-<!--		</repository>-->
-<!--	</distributionManagement>-->
 	<profiles>
 		<profile>
 			<id>ci</id>
