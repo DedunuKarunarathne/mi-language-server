@@ -1,0 +1,86 @@
+name: Maven Release
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Validate Maven
+        run: mvn -version
+
+      - name: Read current version
+        id: read_version
+        run: |
+          current_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "current_version=$current_version"
+          echo "current_version=$current_version" >> $GITHUB_OUTPUT
+
+      - name: Compute next version
+        id: compute_next
+        run: |
+          current_version="${{ steps.read_version.outputs.current_version }}"
+          # extract the wso2vNN part
+          current_patch=$(echo "$current_version" | grep -o 'wso2v[0-9]\+' | grep -o '[0-9]\+')
+          next_patch=$((current_patch + 1))
+          # remove -SNAPSHOT if present
+          release_version=${current_version/-SNAPSHOT/}
+          # build next snapshot version
+          next_version="${release_version/wso2v$current_patch/wso2v$next_patch}-SNAPSHOT"
+          echo "release_version=$release_version"
+          echo "next_version=$next_version"
+          echo "release_version=$release_version" >> $GITHUB_OUTPUT
+          echo "next_version=$next_version" >> $GITHUB_OUTPUT
+
+      - name: Configure Maven settings file
+        run: |
+          mkdir -p ~/.m2
+          echo "<settings>
+                  <servers>
+                    <server>
+                      <id>nexus-releases</id>
+                      <username>${{ secrets.NEXUS_USERNAME }}</username>
+                      <password>${{ secrets.NEXUS_PASSWORD }}</password>
+                    </server>
+                  </servers>
+                </settings>" > ~/.m2/settings.xml
+      - name: Configure git credentials
+        run: |
+          git config --global user.name ${{ secrets.WSO2_INTEGRATION_BOT_USERNAME }}
+          git config --global user.email ${{ secrets.WSO2_INTEGRATION_BOT_EMAIL }}
+
+      - name: Build artifacts
+        run: |
+          mvn clean install
+
+      - name: Deploy artifacts with Maven
+        env:
+          GITHUB_TOKEN: ${{ secrets.WSO2_INTEGRATION_BOT_TOKEN }}
+        run: |
+          mvn --batch-mode release:prepare release:perform  -DreleaseVersion=${{ steps.compute_next.outputs.release_version }} \
+            -DdevelopmentVersion=${{ steps.compute_next.outputs.next_version }} \
+            -Dtag=${{ steps.compute_next.outputs.release_version }} \
+            -Darguments="-DskipTests"
+
+      - name: Create Github Release with Assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.WSO2_INTEGRATION_BOT_TOKEN }}
+        run: |
+          find target/ -type f -name '*-SNAPSHOT*.zip' -exec rm -f {} \;
+          gh release create "${{ steps.compute_next.outputs.release_version }}" \
+            --repo="$GITHUB_REPOSITORY" \
+            --title="${{ steps.compute_next.outputs.release_version }}" \
+            --generate-notes \
+            target/mi-language-server-${{ steps.compute_next.outputs.release_version }}.jar \
+            target/mi-language-server-uber.jar
