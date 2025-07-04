@@ -62,8 +62,8 @@ public abstract class AbstractConnectorLoader {
         if (!Utils.isValidProject(projectRoot)) {
             throw new InvalidConfigurationException("Invalid MI project root");
         }
-        setConnectorsZipFolderPath(projectRoot);
         setProjectUri(projectRoot);
+        setConnectorsZipFolderPath(projectRoot);
         connectorExtractFolder = getConnectorExtractFolder();
     }
 

@@ -4,7 +4,7 @@
 	<artifactId>mi-language-server-parent</artifactId>
 	<version>0.24.0-wso2v69-SNAPSHOT</version>
 	<packaging>pom</packaging>
-	<name>Eclipse LemMinX</name>
+	<name>MI Language Server - Parent</name>
 	<description>LemMinX is a XML Language Server Protocol (LSP), and can be used with any editor that supports LSP, to offer an outstanding XML editing experience</description>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -288,7 +288,7 @@
 					<version>3.0.0-M6</version>
 					<configuration>
 						<tagNameFormat>@{project.version}</tagNameFormat>
-						<arguments>-DskipTests=true -Dcbi.jarsigner.skip=false -Pci,generate-p2</arguments>
+						<arguments>-DskipTests=true -Dcbi.jarsigner.skip=false -Pci</arguments>
 					</configuration>
 				</plugin>
 				<plugin>
