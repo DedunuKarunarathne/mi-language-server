@@ -76,6 +76,9 @@ public class ExpressionHelperProvider {
         if (!ExpressionCompletionUtils.isValidRequest(param)) {
             return getBasicHelperData();
         }
+        if (param.getNeedLastMediator()) {
+            return getLastMediatorHelperData(param);
+        }
         try {
             boolean isNewMediator = isNewMediator(param);
             String payload =
@@ -106,11 +109,11 @@ public class ExpressionHelperProvider {
             return getBasicHelperData();
         }
         try {
-            Path documentTruePath = Paths.get(new URI(param.getDocumentUri()));
+            Path documentTruePath = Path.of(Utils.getAbsolutePath(param.getDocumentUri()));
             Position position =
                     ExpressionCompletionUtils.getLastMediatorPosition(documentTruePath.toString(), param.getPosition());
             return getExpressionHelperData(new ExpressionParam(documentTruePath.toString(), position));
-        } catch (IOException | URISyntaxException e) {
+        } catch (IOException e) {
             return getBasicHelperData();
         }
     }

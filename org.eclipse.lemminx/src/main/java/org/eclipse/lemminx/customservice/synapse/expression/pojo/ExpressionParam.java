@@ -22,6 +22,7 @@ public class ExpressionParam {
     private Position position;
     private String expression;
     private int offset;
+	private boolean needLastMediator;
 
     public ExpressionParam(String expression, int offset) {
 
@@ -43,6 +44,13 @@ public class ExpressionParam {
         this.position = position;
     }
 
+    public ExpressionParam(String documentUri, Position position, boolean needLastMediator) {
+
+        this.documentUri = documentUri;
+        this.position = position;
+        this.needLastMediator = needLastMediator;
+    }
+
     public String getDocumentUri() {
 
         return documentUri;
@@ -62,4 +70,8 @@ public class ExpressionParam {
 
         return offset;
     }
+
+	public boolean getNeedLastMediator(){
+		return needLastMediator;
+	}
 }
