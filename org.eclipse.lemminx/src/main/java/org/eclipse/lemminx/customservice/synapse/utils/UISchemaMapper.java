@@ -44,6 +44,7 @@ public class UISchemaMapper {
     public static JsonObject mapInputToUISchema(JsonObject data, JsonObject uiSchema) {
         JsonArray elements = uiSchema.getAsJsonArray("elements");
         processElements(data, elements);
+        updateSchemaForEventIntegrations(uiSchema);
         return uiSchema;
     }
 
@@ -238,5 +239,41 @@ public class UISchemaMapper {
             }
         }
         return mapInputToUISchema(data, uiSchema);
+    }
+
+    private static void updateSchemaForEventIntegrations(JsonObject schema) {
+        if (!schema.has(Constant.TYPE) || !Constant.EVENT_INTEGRATION.equals(schema.get(Constant.TYPE).getAsString())) {
+            return;
+        }
+
+        JsonArray groups = schema.getAsJsonArray(Constant.ELEMENTS);
+
+        for (JsonElement groupElem : groups) {
+            JsonObject groupObj = groupElem.getAsJsonObject();
+            JsonObject groupValue = groupObj.getAsJsonObject(Constant.VALUE);
+            if (!Constant.GENERIC.equals(groupValue.get(Constant.GROUP_NAME).getAsString())) {
+                continue;
+            }
+
+            JsonArray attributes = groupValue.getAsJsonArray(Constant.ELEMENTS);
+            for (JsonElement attrElem : attributes) {
+                JsonObject attrObj = attrElem.getAsJsonObject();
+                if (!Constant.ATTRIBUTE.equals(attrObj.get(Constant.TYPE).getAsString())) {
+                    continue;
+                }
+
+                JsonObject value = attrObj.getAsJsonObject(Constant.VALUE);
+                if (Constant.SEQUENCE.equals(value.get(Constant.NAME).getAsString())) {
+                    value.remove(Constant.ENABLE_CONDITION);
+                }
+                if (Constant.ON_ERROR.equals(value.get(Constant.NAME).getAsString())) {
+                    value.remove(Constant.ENABLE_CONDITION);
+                }
+                if (Constant.GENERATE_SEQUENCES.equals(value.get(Constant.NAME).getAsString())) {
+                    value.addProperty(Constant.CURRENT_VALUE, false);
+                    value.addProperty(Constant.HIDDEN, true);
+                }
+            }
+        }
     }
 }
